@@ -1,0 +1,49 @@
+This is BibTeX, Version 0.99d (TeX Live 2021)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: L2 minimizing Jlens.aux
+The style file: amsplain.bst
+Database file #1: lit.bib
+Warning--missing pages in gurnee2026jspace
+Warning--missing pages in yan2026shorthorizons
+You've used 2 entries,
+            2213 wiz_defined-function locations,
+            509 strings with 4624 characters,
+and the built_in function-call counts, 1109 in all, are:
+= -- 76
+> -- 121
+< -- 0
++ -- 48
+- -- 46
+* -- 120
+:= -- 205
+add.period$ -- 2
+call.type$ -- 2
+change.case$ -- 29
+chr.to.int$ -- 0
+cite$ -- 4
+duplicate$ -- 22
+empty$ -- 41
+format.name$ -- 46
+if$ -- 192
+int.to.chr$ -- 0
+int.to.str$ -- 2
+missing$ -- 4
+newline$ -- 17
+num.names$ -- 4
+pop$ -- 33
+preamble$ -- 2
+purify$ -- 27
+quote$ -- 0
+skip$ -- 11
+stack$ -- 0
+substring$ -- 10
+swap$ -- 4
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 8
+warning$ -- 2
+while$ -- 4
+width$ -- 3
+write$ -- 24
+(There were 2 warnings)

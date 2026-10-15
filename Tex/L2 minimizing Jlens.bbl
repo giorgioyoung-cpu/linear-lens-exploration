@@ -1,0 +1,23 @@
+\providecommand{\MR}[1]{}
+\providecommand{\bysame}{\leavevmode\hbox to3em{\hrulefill}\thinspace}
+\providecommand{\MR}{\relax\ifhmode\unskip\space\fi MR }
+% \MRhref is called by the amsart/book/proc definition of \MR.
+\providecommand{\MRhref}[2]{%
+  \href{http://www.ams.org/mathscinet-getitem?mr=#1}{#2}
+}
+\providecommand{\href}[2]{#2}
+\begin{thebibliography}{1}
+
+\bibitem{gurnee2026jspace}
+Wes Gurnee, Nicholas Sofroniew, Adam Pearce, Mateusz Piotrowski, Isaac Kauvar,
+  Runjin Chen, Anna Soligo, Paul Bogdan, Euan Ong, Rowan Wang, Ben Thompson,
+  David Abrahams, Subhash Kantamneni, Emmanuel Ameisen, Joshua Batson, and Jack
+  Lindsey, \emph{Verbalizable representations form a global workspace in
+  language models}, arXiv preprint arXiv:2607.15495 (2026).
+
+\bibitem{yan2026shorthorizons}
+Shi-Qi Yan, Kai-Xuan Ding, Chao-Hong Tan, Qian Chen, Wen Wang, Xiangang Li, and
+  Zhen-Hua Ling, \emph{Short horizons and sparse concepts: a mathematical view
+  of the readout in the j-lens}, arXiv preprint arXiv:2608.25347 (2026).
+
+\end{thebibliography}

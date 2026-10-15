@@ -1,0 +1,379 @@
+\documentclass[10pt,oneside,reqno]{amsart}
+
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+  \usepackage{lmodern}
+
+  \usepackage{hyperref}
+
+  \usepackage{amsmath}
+  \usepackage{amsthm}
+  \usepackage{amsfonts}
+  \usepackage{amssymb}
+  \usepackage{amscd}
+  \usepackage{amsbsy}
+
+  \usepackage{pdfpages}
+  \usepackage{fancyhdr}
+  \usepackage{geometry}
+  \usepackage{setspace}
+  \usepackage{xcolor}
+  %\usepackage{tocloft}
+  \usepackage{pifont}
+
+  \usepackage{graphicx}
+  \usepackage{tabularx}
+  \usepackage{epsfig}
+  \usepackage[all]{xy}
+  \usepackage{tikz}
+  \usetikzlibrary{matrix}
+
+  \usepackage{fixmath}
+
+  \usepackage{appendix}
+
+
+
+  %\usepackage{eurosym}
+  \usepackage{enumerate}
+
+
+
+  \usepackage[sort, numbers]{natbib}
+  \usepackage{bibentry}
+  % hyperref should be the last package included
+  %\usepackage[colorlinks,citecolor=red,linkcolor=blue]{hyperref}
+
+
+  % #########################################################
+  % ### E N V I R O N M E N T S #############################
+  % #########################################################
+  \newtheorem{theorem}{Theorem}[section]
+
+  \newtheorem*{ack}{Acknowledgments}
+  \newtheorem{theoremm}{Theorem}[section]
+  \newtheorem{lemma}[theorem]{Lemma}
+  \newtheorem{proposition}[theorem]{Proposition}
+  \newtheorem{claim}[theorem]{Claim}
+  \newtheorem{corollary}[theorem]{Corollary}
+  \newtheorem{hypothesis}[theorem]{Hypothesis}
+  \theoremstyle{definition}
+  \newtheorem{definition}[theorem]{Definition}
+  \newtheorem{notation}[theorem]{Notation}
+  \newtheorem{question}[theorem]{Question}
+  \newtheorem*{remark}{Remark}
+  \newtheorem*{remarks}{Remarks}
+  \newtheorem{problem}[theorem]{Problem}
+  \newtheorem{fact}[theorem]{Fact}
+  \newtheorem{conjecture}[theorem]{Conjecture}
+  \newtheorem{example}[theorem]{Example}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  \numberwithin{equation}{section}
+
+  % #########################################################
+  % ### C O M M A N D S #####################################
+  % #########################################################
+  \newcommand{\N}{{\mathbb N}}
+  \newcommand{\Z}{{\mathbb Z}}
+  \renewcommand{\P}{{\mathbb P}}
+  \newcommand{\Q}{{\mathbb Q}}
+  \newcommand{\R}{{\mathbb R}}
+  \newcommand{\C}{{\mathbb C}}
+  \newcommand{\D}{{\mathbb D}}
+  \newcommand{\T}{{\mathbb T}}
+  \newcommand{\A}{{\mathbb A}}
+  \newcommand{\bbH}{{\mathbb H}}
+  \newcommand{\E}{{\mathsf E}}
+  \newcommand{\V}{{\mathbb V}}
+  \newcommand{\Schwartz}{{\mathcal S}}
+  \newcommand{\mj}{j}
+  \newcommand{\mjH}{j}
+
+  \newcommand{\cov}{{\operatorname{cov}}}
+  \newcommand{\leb}{{\operatorname{Leb}}}
+  \newcommand{\supp}{{\operatorname{supp}}}
+  \newcommand{\diam}{{\operatorname{diam}}}
+  \newcommand{\Res}{\operatorname{Res}}
+  \newcommand{\GMP}{\text{\rm GMP}}
+  \newcommand{\oc}{\overset{\circ}}
+  \newcommand{\err}{{\mathrm{err}}}
+  \newcommand{\dd}{{\mathrm d}}
+  \newcommand{\disc}{{\mathrm{disc}}}
+  \newcommand{\simu}{{\mathrm{sim}}}
+  \newcommand{\QMC}{{\mathrm{QMC}}}
+  \newcommand{\MC}{{\mathrm{MC}}}
+  \newcommand{\her}{{\mathrm{her}}}
+  \newcommand{\tr}{\operatorname{tr}}
+  \newcommand{\sign}{\mathrm{sign}}
+  \newcommand{\lin}{\mathrm{span}}
+  \newcommand{\integ}{\mathrm{int}}
+  \newcommand{\id}{\mathrm{id}}
+  \newcommand{\clos}{\text{\rm clos}\,}
+  \newcommand{\diag}{\operatorname{diag}}
+
+  \newcommand{\cA}{{\mathcal{A}}}
+  \newcommand{\cB}{\mathcal B}
+  \newcommand{\cC}{{\mathcal{C}}}
+  \newcommand{\cD}{{\mathcal{D}}}
+  \newcommand{\cE}{{\mathcal{E}}}
+  \newcommand{\cF}{{\mathcal{F}}}
+  \newcommand{\cG}{{\mathcal{G}}}
+  \newcommand{\cH}{{\mathcal{H}}}
+  \newcommand{\cJ}{{\mathcal{J}}}
+  \newcommand{\cI}{{\mathcal{I}}}
+  \newcommand{\cK}{{\mathcal{K}}}
+  \newcommand{\cL}{{\mathcal{L}}}
+  \newcommand{\cN}{{\mathcal{N}}}
+  \newcommand{\cM}{{T}}
+  \newcommand{\cO}{{\mathcal{O}}}
+  \newcommand{\cP}{{\mathcal{P}}}
+  \newcommand{\cQ}{{\mathcal{Q}}}
+  \newcommand{\cR}{{\mathcal{R}}}
+  \newcommand{\cS}{{\mathcal{S}}}
+  \newcommand{\cT}{{\mathcal{T}}}
+  \newcommand{\cZ}{{\mathcal{Z}}}
+  \newcommand{\cX}{{\mathcal{X}}}
+  \newcommand{\cY}{{\mathcal{Y}}}
+  \newcommand{\cW}{{\mathcal{W}}}
+  \newcommand{\cV}{{\mathcal{V}}}
+  \newcommand{\cU}{{U}}
+  \newcommand{\cv}{{\mathcal{v}}}
+
+
+
+
+  \newcommand{\fA}{{\mathfrak{A}}}
+  \newcommand{\fB}{{\mathfrak{B}}}
+  \newcommand{\fH}{{\mathfrak{H}}}
+  \newcommand{\fK}{{\mathfrak{K}}}
+  \newcommand{\fP}{{\mathfrak{P}}}
+  \newcommand{\fX}{{\mathfrak{X}}}
+  \newcommand{\fS}{{\mathfrak{S}}}
+  \newcommand{\fa}{{\mathfrak{a}}}
+  \newcommand{\fb}{{\mathfrak{b}}}
+  \newcommand{\fe}{{\mathfrak{e}}}
+  \newcommand{\ff}{{\mathfrak{f}}}
+  \newcommand{\fj}{{\mathfrak{j}}}
+  \newcommand{\fm}{{\mathfrak{m}}}
+  \newcommand{\fp}{{\mathfrak{p}}}
+  \newcommand{\fu}{{\mathfrak{u}}}
+  \newcommand{\fv}{{\mathfrak{v}}}
+  \newcommand{\fw}{{\mathfrak{w}}}
+  \newcommand{\fz}{{\mathfrak{z}}}
+  \newcommand{\fx}{{\mathfrak{x}}}
+  \newcommand{\vu}{{\underline{u}}}
+  \newcommand{\vv}{{\underline{v}}}
+
+
+
+  \newcommand{\bb}{\mathbf{b}}
+  \newcommand{\ba}{\mathbf{a}}
+  \newcommand{\bu}{\mathbf{u}}
+  \newcommand{\bv}{\mathbf{v}}
+  \newcommand{\bx}{\mathbf{x}}
+  \newcommand{\bd}{\mathbf{d}}
+  \newcommand{\bc}{\mathbf{c}}
+  \newcommand{\bC}{\mathbf{C}}
+  \newcommand{\bD}{\mathbf{D}}
+  \newcommand{\bp}{{\mathbf{p}}}
+  \newcommand{\bR}{{\mathbf{R}}}
+
+
+
+  \newcommand{\gammab}{{\boldsymbol{\gamma}}}
+  \newcommand{\balpha}{{\boldsymbol{\gamma}}}
+  \newcommand{\bomega}{{\boldsymbol{\omega}}}
+  \newcommand{\bbeta}{{\boldsymbol{\beta}}}
+  \newcommand{\bepsilon}{{\boldsymbol{\epsilon}}}
+  \newcommand{\bzeta}{{\boldsymbol{\zeta}}}
+  \newcommand{\bl}{{\boldsymbol{\lambda}}}
+
+  \newcommand{\e}{{\varepsilon}}
+  \renewcommand{\k}{\varkappa}
+  \newcommand{\vt}{\vartheta}
+  \newcommand{\vpi}{\varpi}
+  \newcommand{\om}{{\omega}}
+  \newcommand{\z}{z}
+  \newcommand{\g}{\gamma}
+  \newcommand{\Up}{\Upsilon}
+  \renewcommand{\l}{\lambda}
+  \renewcommand{\a}{\gamma}
+  \newcommand{\x}{y}
+  \renewcommand{\b}{\beta}
+  \renewcommand{\d}{\delta}
+  \renewcommand{\t}{{\theta}}
+  \renewcommand{\L}{{\Lambda}}
+
+  \newcommand{\height}{s}
+
+  \newcommand{\spa}{\operatorname{span}}
+  \renewcommand{\Re}{\operatorname{Re}}
+  \renewcommand{\Im}{\operatorname{Im}}
+  \renewcommand{\Cap}{\operatorname{Cap}}
+  \newcommand{\dist}{\operatorname{dist}}
+  \newcommand{\dx}{\mathrm{d}x}
+  \newcommand{\pd}{{\partial}}
+  \newcommand{\rz}{z^*}
+  %\newcommand{\loc}{\operatorname{loc}}
+ \DeclareMathOperator*{\argmin}{arg\,min}
+
+  \newcommand{\gdw}{\Leftrightarrow}
+
+  \newcommand{\ld}{\operatorname{ld}}
+  \newcommand{\wlim}{\operatorname*{w-lim}}
+  \newcommand{\slim}{\operatorname*{s-lim}}
+  \newcommand{\zu}{z_{\zeta_0}}
+  \newcommand{\zub}{\overline z_{\zeta_0}}
+  \newcommand{\zi}{z_{\infty}}
+  \newcommand{\tzi}{\tilde z_{\infty}}
+  \newcommand{\ko}{\kappa_0}
+  \newcommand{\za}{z_\gamma}
+  \newcommand{\cza}{\overline z_\gamma}
+
+  \newcommand{\gO}{g_\Omega}
+
+  \newcommand{\vp}{{\vec{p}}}
+  \newcommand{\vq}{{\vec{q}}}
+  \newcommand{\vbp}{{\vec{\mathbf{p}}}}
+  \newcommand{\vd}{{\vec{\delta}_g}}
+  \renewcommand{\i}{\infty}
+  %\renewcommand{\vec}{\hspace{-0.1cm}\vec}
+  \newcommand{\vz}{\vec{\vspace{1cm}z}}
+
+
+  \newcommand{\minus}{\scalebox{0.5}[1.0]{\( -\)}\hspace{-0.04cm}}
+
+   \newcommand{\TODO}[1]{\noindent{\bf \color{cyan}TODO: }{\color{cyan} #1}}
+
+  % #########################################################
+  % ### S T Y L E ###########################################
+  % #########################################################
+
+  \newcommand{\apa}{\mathbf a}
+  \newcommand{\apr}{\mathbold\rho}
+  \newcommand{\apC}{\mathcal C}
+
+  \newcommand{\mv}{\text{\rm{CMV}}}
+  \newcommand{\MV}{\text{\rm{MCMV}}}
+  \newcommand{\dom}{\text{\rm{Dom}}}  
+  \newcommand{\per}{\text{\rm{per}}}
+  \newcommand{\ess}{\text{\rm{ess}}}
+
+  \newcommand{\DD}{D_{0}}
+
+  \newcommand{\bbD}{\mathbb{D}}
+  \newcommand{\bbN}{\mathbb{N}}
+  \newcommand{\bbZ}{\mathbb{Z}}
+  \newcommand{\bbQ}{\mathbb{Q}}
+  \newcommand{\bbR}{\mathbb{R}}
+  \newcommand{\bbC}{\mathbb{C}}
+  \newcommand{\bbE}{\mathbb{E}}
+
+  \newcommand{\AC}{\mathrm{AC}}
+  \newcommand{\loc}{\mathrm{loc}}
+  \renewcommand{\GMP}{\mathrm{GMP}}
+
+  \newcommand{\spann}{\mathrm{span}}
+
+  \newcommand{\blue}[1]{\textcolor{blue}{#1}}
+
+  \allowdisplaybreaks
+
+\title{A Least-Squares J-lens}
+
+
+\author[G. Young]{Giorgio Young}
+\address{}
+\email{giorgio.young@gmail.com}
+
+
+
+
+%\author{}
+
+\begin{document}
+\begin{abstract}
+The motivation for this note is first mathematical, can we linearize in a global sense to start, and does, for example, the linear coefficient reproduce the qualitative attributes of J-lens? Furthermore, does adding a quadratic form term at fairly minimal cost seem to improve the faithfullness of this workspace in some sense? In addition to being natural and interesting, this approach would seem to be numerically cheaper than the derivative computation involved in producing the J-lens (probably by solving the normal equation, but it can of course be done using SGD). If the answer is no, there may be something fairly subtle in the J-lens paper, and probably more questions to be answered. This perspective has already been examined in \cite{yan2026shorthorizons}, where they prove that in the special case of Gaussian distributed activations at the $\ell$'th layer, the two notions agree. We aim to explore further connections, both empirical and theoretical, and in particular, find analogous results to those of \cite{gurnee2026jspace} through least-squares approximation.
+
+\end{abstract}
+
+\maketitle
+
+
+\section{Introduction}
+
+We set some notation and review the $J$-space construction introduced in \cite{gurnee2026jspace}. Consider a causal autoregressive transformer with $L$ layers. Given an input sequence $x$ consisting of $n=n(x)\in \bbN$ tokens $x=(t_1,\dots,t_n)$, we denote by 
+\begin{align*}
+h_\ell^{(i)}=h_\ell^{(i)}(t_1,\dots,t_i)\in \mathbb R^d
+\end{align*}
+the internal representation at a layer $1\leq \ell\leq L$, where $d=d_{model}$ is the dimension of the residual stream, or the length of the vector embeddings. In \cite{gurnee2026jspace}, the $J$-lens is defined to be the Jacobian in the $\ell$'th layer internal representations averaged over inputs and admissible tokens:
+\begin{align*}
+J_\ell=\bbE_{x,(i,j)\in P}\left[\frac{\partial h_{L}^{(i)}(x)}{\partial h_{\ell}^{(j)}(x)}\right]\in \bbR^{d\times d},
+\end{align*}
+where $P=P_x$ is an admissible set of tokens:
+\begin{align*}
+P=\{(i,j): 16\leq j\leq i\leq n(x)-1\}
+\end{align*}
+where the lower bound is empirically motivated, and the condition $i\leq j$ is a consequence of causality. In other words, a local first order approximation, followed by a an average over prompts and admissible tokens. 
+
+It is natural to ask about a more global "linearization," i.e. a least squares approximation, that has the feature of being a global approximant in inputs and tokens to start, and this will be our focus in this note. We will attempt to construct and test this new ``global" $J$-lens, from which the remaining $J$-space constructions will follow similarly. We note here that the set-up we describe below has already appeared in \cite{yan2026shorthorizons}. The authors relate this formulation to the original $J$-lens construction, showing via Stein's identity that the optimal least-squares slope coincides with the expected Jacobian of the corresponding readout map when its input distribution is Gaussian and under suitable regularity assumptions. The explorations below are novel, to the best of our knowledge.
+
+
+however, the authors there relate it to the original $J$-lens construction, proving the two definitions coincide when the $h_\ell$ are taken to be Gaussian random variables.
+
+
+
+%In \cite{gurnee2026jspace}, there is first a local approximation from which a global statistic may be derived: for a given input, they linearize the remaining layers of a network after some intermediate layer, computing the total derivative, and from this local quantity, a global quantity is derived by taking an empirical average in both inputs and future tokens. 
+
+
+\begin{question}
+Can we globally linearize to start via a least squares procedure and recover the attributes of the $J$-lens? In particular, does the object
+\begin{align}
+\mathcal J_{\ell}=\argmin\limits_{A\in \mathbb R^{d\times d}}\bbE_{x,(i,j)\in P}[\|h_L^{(i)}(x)-Ah_\ell^{(j)}(x)\|^2] \label{eq:Jlensmod}
+\end{align}
+recover the properties of the $J_\ell$ of \cite{gurnee2026jspace}. 
+\begin{enumerate}
+\item We will choose the a uniform sampling choice across input passages $x_k\in \{x_1,\dots,x_N\}$, and $m_k:=|P_{x_k}|$ and index pairs in $P_{x_k}$:
+\begin{align*}
+\bbE_{x,(i,j)\in P}[G(\cdot,\cdot,\cdot)]=\frac1N\sum_{k=1}^N \frac{1}{m_k}\sum_{(i,j)\in P_{x_k}}G(x_k,i,j).
+\end{align*}
+This choice does not privilege longer texts, although other sampling choices could be made. \textcolor{red}{This performed poorly empirically}
+Another option is 
+\begin{align*}
+\cJ_\ell=\argmin\limits_{A\in\bbR^{d\times d}}\frac1N\sum_{k=1}^N\frac{1}{n(x_k)}\sum_{j=0}^{n(x_k)-1}\|h_{L}^{(j)}(x_k)-Ah_{\ell}^{(j)}(x_k)\|^2
+\end{align*}
+where we select the Frobenius norm minimizing solution. As we will discuss in the empirical section, the minimizer is in fact unique in our experiment.
+
+
+\item We will also examine any improvements  from adding an affine or quadratic part. The affine part is excluded to more closely match the original $J$-lens construction.
+\item We note some advantages include computational efficiency, and the modification is mathematically natural, with these extensions similarly not too expensive computationally. Indeed, we will only need forward passes and no derivatives should be computed.
+\end{enumerate}
+
+\end{question}
+
+
+\section{Theoretical Preliminaries}
+
+We may solve for solutions of \eqref{eq:Jlensmod} as:
+\begin{align*}
+\cJ_\ell
+=
+\bbE_{x,(i,j)\in P_x}
+\left[h_L^{(i)}(x)\,h_\ell^{(j)}(x)^\top\right]
+\left(
+\bbE_{x,(i,j)\in P_x}
+\left[h_\ell^{(j)}(x)\,h_\ell^{(j)}(x)^\top\right]
+\right)^\dagger,
+\end{align*}
+where $\dagger$ denotes the Moore-Penrose Pseudoinverse. 
+
+
+\section{Empirical Preliminaries}
+We will be using Qwen2.5-0.5B-Instruct to run our experiment. It has $24$ layers and $500$ million parameters, with $d=896$ the model dimension. We will be running this locally, so a larger model will not be functional, particularly if we want to compare directly to the original $J$-lens construction, which will require backwards propagation.
+
+
+\bibliographystyle{amsplain}
+\bibliography{lit}
+
+
+\end{document}
