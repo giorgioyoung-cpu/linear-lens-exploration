@@ -3,7 +3,7 @@
   \usepackage[utf8]{inputenc}
   \usepackage[T1]{fontenc}
   \usepackage{lmodern}
-
+\usepackage{float}
   \usepackage{hyperref}
 
   \usepackage{amsmath}
@@ -27,6 +27,7 @@
   \usepackage[all]{xy}
   \usepackage{tikz}
   \usetikzlibrary{matrix}
+  \usepackage{booktabs,tabularx}
 
   \usepackage{fixmath}
 
@@ -279,7 +280,7 @@
 
   \allowdisplaybreaks
 
-\title{A Least-Squares J-lens}
+\title{A Least-Squares Linear Lens}
 
 
 \author[G. Young]{Giorgio Young}
@@ -293,7 +294,7 @@
 
 \begin{document}
 \begin{abstract}
-The motivation for this note is first mathematical, can we linearize in a global sense to start, and does, for example, the linear coefficient reproduce the qualitative attributes of J-lens? Furthermore, does adding a quadratic form term at fairly minimal cost seem to improve the faithfullness of this workspace in some sense? In addition to being natural and interesting, this approach would seem to be numerically cheaper than the derivative computation involved in producing the J-lens (probably by solving the normal equation, but it can of course be done using SGD). If the answer is no, there may be something fairly subtle in the J-lens paper, and probably more questions to be answered. This perspective has already been examined in \cite{yan2026shorthorizons}, where they prove that in the special case of Gaussian distributed activations at the $\ell$'th layer, the two notions agree. We aim to explore further connections, both empirical and theoretical, and in particular, find analogous results to those of \cite{gurnee2026jspace} through least-squares approximation.
+In this note, we examine several global linearization techniques and examine some qualitative attributes of the slope variable $\cJ$ under each method in comparison to the $J$-lens introduced in \cite{gurnee2026jspace}. If the preliminary results are positive, we will construct a corresponding $\cJ$-space analogously to \cite{gurnee2026jspace}, and examine how its attributes compare. We will also examine whether additional affine or quadratic terms in the approximation improve the workspace representation in some sense. 
 
 \end{abstract}
 
@@ -312,14 +313,11 @@ J_\ell=\bbE_{x,(i,j)\in P}\left[\frac{\partial h_{L}^{(i)}(x)}{\partial h_{\ell}
 \end{align*}
 where $P=P_x$ is an admissible set of tokens:
 \begin{align*}
-P=\{(i,j): 16\leq j\leq i\leq n(x)-1\}
+P=\{(i,j): 17\leq j\leq i\leq n(x)-1\}
 \end{align*}
-where the lower bound is empirically motivated, and the condition $i\leq j$ is a consequence of causality. In other words, a local first order approximation, followed by a an average over prompts and admissible tokens. 
+where the lower bound is empirically motivated, and the condition $i\leq j$ is a consequence of causality (nb, we are indexing from $1$ here). In other words, a local first order approximation, followed by a an average over prompts and admissible tokens. 
 
-It is natural to ask about a more global "linearization," i.e. a least squares approximation, that has the feature of being a global approximant in inputs and tokens to start, and this will be our focus in this note. We will attempt to construct and test this new ``global" $J$-lens, from which the remaining $J$-space constructions will follow similarly. We note here that the set-up we describe below has already appeared in \cite{yan2026shorthorizons}. The authors relate this formulation to the original $J$-lens construction, showing via Stein's identity that the optimal least-squares slope coincides with the expected Jacobian of the corresponding readout map when its input distribution is Gaussian and under suitable regularity assumptions. The explorations below are novel, to the best of our knowledge.
-
-
-however, the authors there relate it to the original $J$-lens construction, proving the two definitions coincide when the $h_\ell$ are taken to be Gaussian random variables.
+It is natural to ask about a more global "linearization," i.e. a least squares approximation, that has the feature of being a global approximant in inputs and tokens to start, and this will be our focus in this note. We will attempt to construct and test this new ``global" $J$-lens, from which the remaining $J$-space constructions will follow similarly. We note here that the set-up we describe below has already appeared in \cite{yan2026shorthorizons}. The authors relate this formulation to the original $J$-lens construction, showing via Stein's identity that the optimal least-squares slope coincides with the expected Jacobian of the corresponding readout map when its input distribution is Gaussian and under suitable regularity assumptions. The explorations below are novel, to the best of our knowledge. In addition to being natural and interesting, this approach would be numerically cheaper than the derivative computation involved in producing the J-lens. If our results are negative, there may be something fairly subtle in the J-lens paper, and probably more questions to be answered.
 
 
 
@@ -327,49 +325,263 @@ however, the authors there relate it to the original $J$-lens construction, prov
 
 
 \begin{question}
-Can we globally linearize to start via a least squares procedure and recover the attributes of the $J$-lens? In particular, does the object
-\begin{align}
-\mathcal J_{\ell}=\argmin\limits_{A\in \mathbb R^{d\times d}}\bbE_{x,(i,j)\in P}[\|h_L^{(i)}(x)-Ah_\ell^{(j)}(x)\|^2] \label{eq:Jlensmod}
-\end{align}
-recover the properties of the $J_\ell$ of \cite{gurnee2026jspace}. 
-\begin{enumerate}
-\item We will choose the a uniform sampling choice across input passages $x_k\in \{x_1,\dots,x_N\}$, and $m_k:=|P_{x_k}|$ and index pairs in $P_{x_k}$:
+Can we globally linearize to start via a least squares procedure and recover the attributes of the $J$-lens? Can it be improved in accuracy at low computation cost by adding quadratic and/or affine term? 
+\end{question}
+
+We note some advantages to a positive resolution include computational efficiency, and the modification is mathematically natural, with these extensions similarly not too expensive computationally. Indeed, we will only need forward passes and no derivatives should be computed. There are several inequivalent potential ways to more globally approximate, and we will test each empirically on a small parameter model. 
+
+
+We set 
 \begin{align*}
-\bbE_{x,(i,j)\in P}[G(\cdot,\cdot,\cdot)]=\frac1N\sum_{k=1}^N \frac{1}{m_k}\sum_{(i,j)\in P_{x_k}}G(x_k,i,j).
+V_x &= \{17,\ldots,n(x)-1\},\\
+P_x &= \{(i,j):17\le j\le i\le n(x)-1\}.
 \end{align*}
-This choice does not privilege longer texts, although other sampling choices could be made. \textcolor{red}{This performed poorly empirically}
-Another option is 
+
+
+\begin{enumerate}
+
+\item Pooled: The most naive approach is the pooled causal-pair regression: this minimizes distance over both inputs and tokens, privileging neither:
+\begin{align}\label{eq:pooled}
+(A_\ell^{\mathrm{pooled}},b_\ell^{\mathrm{pooled}})
+&\in
+\arg\min_{\substack{A\in\mathbb R^{d\times d}\\b\in\mathbb R^d}}
+\mathbb E_{x,(i,j)\in P_x}
+\left[
+\left\|h_L^{(i)}(x)-A h_\ell^{(j)}(x)-b\right\|^2
+\right],
+\end{align}
+and set 
 \begin{align*}
-\cJ_\ell=\argmin\limits_{A\in\bbR^{d\times d}}\frac1N\sum_{k=1}^N\frac{1}{n(x_k)}\sum_{j=0}^{n(x_k)-1}\|h_{L}^{(j)}(x_k)-Ah_{\ell}^{(j)}(x_k)\|^2
+\mathcal J_\ell^{\mathrm{pooled}}
+&=A_\ell^{\mathrm{pooled}}.
+\end{align*}
+
+
+
+\item Same: Same position regression: restricts to same token matching downstream, optimizing over error at each token $j$:
+\begin{align}\label{eq:same}
+(A_\ell^{\mathrm{same}},b_\ell^{\mathrm{same}})
+&\in
+\arg\min_{\substack{A\in\mathbb R^{d\times d}\\b\in\mathbb R^d}}
+\frac1N\sum_{k=1}^N\frac1{|V_{x_k}|}
+\sum_{j\in V_{x_k}}
+\left\|
+h_L^{(j)}(x_k)-A h_\ell^{(j)}(x_k)-b
+\right\|^2,
+\end{align}
+so that 
+\begin{align*}
+\mathcal J_\ell^{\mathrm{same}}
+&=A_\ell^{\mathrm{same}}.
 \end{align*}
 where we select the Frobenius norm minimizing solution. As we will discuss in the empirical section, the minimizer is in fact unique in our experiment.
 
+\item Pair: Average over pair specific regressions, the most similar to a non-local $J$-lens:
+Setting 
+\begin{align*}
+K_{ij}&=\{k:(i,j)\in P_{x_k}\}
+\end{align*}
+we take 
+\begin{align}\label{eq:nonlocalJ}
+(A_{\ell;i,j},b_{\ell;i,j})
+&\in
+\arg\min_{\substack{A\in\mathbb R^{d\times d}\\b\in\mathbb R^d}}
+\frac1{|K_{ij}|}\sum_{k\in K_{ij}}
+\left\|
+h_L^{(i)}(x_k)-A h_\ell^{(j)}(x_k)-b
+\right\|^2.
+\end{align}
+and define
+\begin{align*}
+\mathcal J_\ell^{\mathrm{pair}}
+=
+\frac1N\sum_{k=1}^N
+\frac1{|P_{x_k}|}
+\sum_{(i,j)\in P_{x_k}}A_{\ell;i,j}.
+\end{align*}
 
-\item We will also examine any improvements  from adding an affine or quadratic part. The affine part is excluded to more closely match the original $J$-lens construction.
-\item We note some advantages include computational efficiency, and the modification is mathematically natural, with these extensions similarly not too expensive computationally. Indeed, we will only need forward passes and no derivatives should be computed.
+
+
 \end{enumerate}
 
-\end{question}
+
+
+
+
+%
+%\begin{enumerate}
+%\item We will choose the a uniform sampling choice across input passages $x_k\in \{x_1,\dots,x_N\}$, and $m_k:=|P_{x_k}|$ and index pairs in $P_{x_k}$:
+%\begin{align*}
+%\bbE_{x,(i,j)\in P}[G(\cdot,\cdot,\cdot)]=\frac1N\sum_{k=1}^N \frac{1}{m_k}\sum_{(i,j)\in P_{x_k}}G(x_k,i,j).
+%\end{align*}
+%This choice does not privilege longer texts, although other sampling choices could be made. \textcolor{red}{This performed poorly empirically}
+%Another option is 
+%\begin{align*}
+%\cJ_\ell=\argmin\limits_{A\in\bbR^{d\times d}}\frac1N\sum_{k=1}^N\frac{1}{n(x_k)}\sum_{j=0}^{n(x_k)-1}\|h_{L}^{(j)}(x_k)-Ah_{\ell}^{(j)}(x_k)\|^2
+%\end{align*}
+%
+%
+%
+%\item We will also examine any improvements  from adding an affine or quadratic part. The affine part is excluded to more closely match the original $J$-lens construction.
+%\item We note some advantages include computational efficiency, and the modification is mathematically natural, with these extensions similarly not too expensive computationally. Indeed, we will only need forward passes and no derivatives should be computed.
+%\end{enumerate}
+
+
 
 
 \section{Theoretical Preliminaries}
+We record closed form solutions for each candidate $\cJ_\ell$, although they are standard. 
 
-We may solve for solutions of \eqref{eq:Jlensmod} as:
+We may find the norm minimizing solution of \eqref{eq:pooled} as:
 \begin{align*}
-\cJ_\ell
-=
-\bbE_{x,(i,j)\in P_x}
-\left[h_L^{(i)}(x)\,h_\ell^{(j)}(x)^\top\right]
-\left(
-\bbE_{x,(i,j)\in P_x}
-\left[h_\ell^{(j)}(x)\,h_\ell^{(j)}(x)^\top\right]
-\right)^\dagger,
+\mathcal J_\ell^{\mathrm{pooled}}
+&=
+\operatorname{Cov}_{x,(i,j)\in P_x}
+\left(h_L^{(i)}(x),h_\ell^{(j)}(x)\right)
+\left[
+\operatorname{Cov}_{x,(i,j)\in P_x}
+\left(h_\ell^{(j)}(x),h_\ell^{(j)}(x)\right)
+\right]^\dagger
 \end{align*}
-where $\dagger$ denotes the Moore-Penrose Pseudoinverse. 
+where $A^\dagger$ denotes the Moore-Penrose inverse of a matrix $A$.
+
+
+Similarly, for \eqref{eq:same}, we may solve
+\begin{align*}
+\mathcal J_\ell^{\mathrm{same}}
+&=
+\operatorname{Cov}_{x,j\in V_x}
+\left(h_L^{(j)}(x),h_\ell^{(j)}(x)\right)
+\left[
+\operatorname{Cov}_{x,j\in V_x}
+\left(h_\ell^{(j)}(x),h_\ell^{(j)}(x)\right)
+\right]^\dagger
+\end{align*}
+
+and \eqref{eq:nonlocalJ} by 
+\begin{align*}
+A_{\ell;i,j}
+&=
+\operatorname{Cov}_{k\in K_{ij}}
+\left(h_L^{(i)}(x_k),h_\ell^{(j)}(x_k)\right)
+\left[
+\operatorname{Cov}_{k\in K_{ij}}
+\left(h_\ell^{(j)}(x_k),h_\ell^{(j)}(x_k)\right)
+\right]^\dagger
+\end{align*}
+and then $\cJ_\ell^{pair}$ is the average:
+\begin{align*}
+\mathcal J_\ell^{\mathrm{pair}}
+=
+\frac1N\sum_{k=1}^N
+\frac1{|P_{x_k}|}
+\sum_{(i,j)\in P_{x_k}}A_{\ell;i,j}.
+\end{align*}
+
+
+
+
 
 
 \section{Empirical Preliminaries}
 We will be using Qwen2.5-0.5B-Instruct to run our experiment. It has $24$ layers and $500$ million parameters, with $d=896$ the model dimension. We will be running this locally, so a larger model will not be functional, particularly if we want to compare directly to the original $J$-lens construction, which will require backwards propagation.
+
+We used Wikitext to fit our affine approximations, and recovered each $\mathcal J$ as described above, while holding out reserved Wikitext passages for evlaution. In \verb|evaluate_lenses.py|, we compare the three methods of fitting affine lenses with the J-lens on these reserved Wikitext validation passages. We produce readouts and qualitatively compare the three affine-slope lenses with J-lens, along with ordinary logit-lens, final-layer, and constant training-mean readouts as baselines. More precisely, we compare top ten highest scoring vocabulary tokens at the midpoint of the retained interval $17+\lfloor\frac{n-18}{2} \rfloor$, and the penultimate token positions of each passage. We apply each lens matrix to the layer-$12$ (the middle layer) residual, along with the model’s final RMS normalization and unembedding, and inspect the ten highest-scoring vocabulary tokens. For ``type" corresponding to one of our three affine lenses, pooled, paired, and same, we compute
+
+\begin{align*}
+s_{type}(x,j)
+&=
+W_U\,\operatorname{RMSNorm}_{\mathrm{final}}
+\!\left(\mathcal J_{12}^{type}h_{12}^{(j)}(x)\right)
+\in\mathbb R^{|\mathcal V|},\\
+\operatorname{Readout}_{type}(x,j)
+&=
+\operatorname{Decode}\!\left(
+\operatorname{TopKIndices}_{10}[s_{type}(x,j)]
+\right).
+\end{align*}
+
+
+
+To illustrate the results, we record two examples. The first, our global affine lenses appear to capture semantic context better than J-lens, and in the second, worse. The similarity in the pooled outputs reflects pooled limited contextual flexibility, almost certainly downstream from the affine fit being overly constrained, as the best fit affine map with respect to a token and input combined norm. Paired instead seems to be qualitatively the most promising across contexts. We emphasize that both examples were selected after examining the results.
+
+\begin{table}[H]
+\centering
+\small
+
+\begin{minipage}{0.95\linewidth}
+Context: ``\ldots He immediately ran into a problem:
+the South Carolina troops (militia or \textbf{the}''
+\end{minipage}
+
+\medskip
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+Lens & Top five tokens \\
+\midrule
+Pooled & Canyon, Cemetery, damage, Surrey, gunfire \\
+Same   & Union, union, latter, unions, firing \\
+Paired & cavalry, troops, militia, Protector, revolt \\
+J-lens &
+\texttt{?\textbackslash u201d},
+\texttt{?"\textbackslash n},
+\texttt{?"},
+\texttt{\textbackslash uff1f\textbackslash u201d},
+\texttt{.\textbackslash u201d} \\
+\bottomrule
+\end{tabularx}
+
+\caption{Illustrative layer-12 readouts at position
+127 of a 128-token validation passage.
+The inspected token is in bold, and tokens appear in descending score order, with leading
+spaces omitted.
+For J-lens, \texttt{\textbackslash n} denotes a newline,
+\texttt{\textbackslash u201d} a right double quotation mark,
+and \texttt{\textbackslash uff1f} a full-width question mark.}
+\label{tab:readout-military}
+\end{table}
+
+
+\begin{table}[H]
+\centering
+\small
+
+\begin{minipage}{0.95\linewidth}
+Context: ``\ldots also named Saffar, is an extrasolar
+planet approximately 44 light-years away from \textbf{the}''
+\end{minipage}
+
+\medskip
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+Lens & Top five tokens \\
+\midrule
+Pooled & canyon, Canyon, exposures,
+\texttt{\textbackslash u81ea\textbackslash u7136%
+\textbackslash u4fdd\textbackslash u62a4}, emetery \\
+Same   & continent, Isle, northwest, north, island \\
+Paired & northwest, coastal, north, northeast, northern \\
+J-lens & Earth, orbit, planet, NASA, SpaceX \\
+\bottomrule
+\end{tabularx}
+
+\caption{Illustrative layer-12 readouts at position
+72 of a 128-token validation passage
+(\texttt{sequence\_00004.pt}).
+The inspected token is in bold, and tokens appear in descending score order, with leading
+spaces omitted.
+The Unicode escape sequence denotes a Chinese token
+meaning ``nature conservation''; \texttt{emetery}
+is a literal token fragment.
+Context spacing and hyphenation are simplified for readability.
+This example was selected after inspecting the results
+to illustrate a contextually relevant J-lens readout
+and an unrelated paired readout.}
+\label{tab:readout-astronomy}
+\end{table}
+
+
+
 
 
 \bibliographystyle{amsplain}
@@ -377,3 +589,76 @@ We will be using Qwen2.5-0.5B-Instruct to run our experiment. It has $24$ layers
 
 
 \end{document}
+
+
+\section*{Affine-slope lenses}
+All token indices are one-based. Define
+\[
+V_x=\{17,\ldots,n(x)-1\},\qquad
+P_x=\{(i,j):17\leq j\leq i\leq n(x)-1\}.
+\]
+Assume these sets are nonempty. Expectations over passages are uniform;
+conditional on a passage, retained positions or pairs are uniform.
+All covariance matrices use these same weights, with divisor equal to sample
+count (not the unbiased sample-covariance correction).
+
+\paragraph{Pooled.}
+\[
+(A_\ell^{\mathrm{pooled}},b_\ell^{\mathrm{pooled}})
+\in\arg\min_{A,b}\mathbb E_{x,(i,j)\in P_x}
+\|h_L^{(i)}(x)-Ah_\ell^{(j)}(x)-b\|^2.
+\]
+\begin{align*}
+\mathcal J_\ell^{\mathrm{pooled}}&=
+\operatorname{Cov}_{x,(i,j)\in P_x}(h_L^{(i)}(x),h_\ell^{(j)}(x))
+\left[\operatorname{Cov}_{x,(i,j)\in P_x}(h_\ell^{(j)}(x),h_\ell^{(j)}(x))\right]^\dagger,\\
+b_\ell^{\mathrm{pooled}}&=\mathbb E_{x,(i,j)\in P_x}[h_L^{(i)}(x)]
+-\mathcal J_\ell^{\mathrm{pooled}}\mathbb E_{x,(i,j)\in P_x}[h_\ell^{(j)}(x)].
+\end{align*}
+
+\paragraph{Same.}
+\[
+(A_\ell^{\mathrm{same}},b_\ell^{\mathrm{same}})
+\in\arg\min_{A,b}\frac1N\sum_{k=1}^N\frac1{|V_{x_k}|}
+\sum_{j\in V_{x_k}}\|h_L^{(j)}(x_k)-Ah_\ell^{(j)}(x_k)-b\|^2.
+\]
+\begin{align*}
+\mathcal J_\ell^{\mathrm{same}}&=
+\operatorname{Cov}_{x,j\in V_x}(h_L^{(j)}(x),h_\ell^{(j)}(x))
+\left[\operatorname{Cov}_{x,j\in V_x}(h_\ell^{(j)}(x),h_\ell^{(j)}(x))\right]^\dagger,\\
+b_\ell^{\mathrm{same}}&=\mathbb E_{x,j\in V_x}[h_L^{(j)}(x)]
+-\mathcal J_\ell^{\mathrm{same}}\mathbb E_{x,j\in V_x}[h_\ell^{(j)}(x)].
+\end{align*}
+
+\paragraph{Paired: general definition.}
+Set $K_{ij}=\{k:(i,j)\in P_{x_k}\}$. For nonempty $K_{ij}$,
+\[
+(A_{\ell;i,j},b_{\ell;i,j})\in\arg\min_{A,b}
+\frac1{|K_{ij}|}\sum_{k\in K_{ij}}
+\|h_L^{(i)}(x_k)-Ah_\ell^{(j)}(x_k)-b\|^2.
+\]
+\begin{align*}
+A_{\ell;i,j}&=
+\operatorname{Cov}_{k\in K_{ij}}(h_L^{(i)}(x_k),h_\ell^{(j)}(x_k))
+\left[\operatorname{Cov}_{k\in K_{ij}}(h_\ell^{(j)}(x_k),h_\ell^{(j)}(x_k))\right]^\dagger,\\
+b_{\ell;i,j}&=\mathbb E_{k\in K_{ij}}[h_L^{(i)}(x_k)]
+-A_{\ell;i,j}\mathbb E_{k\in K_{ij}}[h_\ell^{(j)}(x_k)],\\
+\mathcal J_\ell^{\mathrm{paired}}&=
+\frac1N\sum_{k=1}^N\frac1{|P_{x_k}|}\sum_{(i,j)\in P_{x_k}} A_{\ell;i,j}.
+\end{align*}
+The code uses the fixed-length special case: every training passage has length
+128, so all $P_{x_k}$ coincide and all eligible $K_{ij}=\{1,\ldots,N\}$.
+All three approaches use this same training subset. The variable-length paired
+extension above is recorded mathematically but not implemented in this package.
+
+\paragraph{Solution convention and readout.}
+The dagger denotes the Moore--Penrose inverse and selects the minimum-Frobenius-norm
+slope among affine minimizers. Numerical cutoffs are documented in the README.
+The lens readout discards the intercept:
+\[
+W_U\operatorname{RMSNorm}_{\mathrm{final}}
+\bigl(\mathcal J_\ell h_\ell^{(j)}(x)\bigr).
+\]
+For paired, the saved intercept is the average of the individual intercepts.
+It is not generally the optimal intercept for the averaged matrix under a
+pooled prediction objective.

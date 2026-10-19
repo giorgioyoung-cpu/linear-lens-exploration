@@ -130,6 +130,17 @@ INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/lm/lmodern.sty
 INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/lm/lmodern.sty
 INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/lm/lmodern.sty
 INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/lm/lmodern.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/float/float.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/float/float.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/float/float.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/float/float.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/float/float.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/float/float.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/float/float.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/float/float.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/float/float.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/float/float.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/float/float.sty
 INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/hyperref/hyperref.sty
 INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/hyperref/hyperref.sty
 INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/hyperref/hyperref.sty
@@ -928,6 +939,18 @@ INPUT /usr/local/texlive/2021/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libr
 INPUT /usr/local/texlive/2021/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarytopaths.code.tex
 INPUT /usr/local/texlive/2021/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarymatrix.code.tex
 INPUT /usr/local/texlive/2021/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarymatrix.code.tex
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/booktabs/booktabs.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/booktabs/booktabs.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/booktabs/booktabs.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/booktabs/booktabs.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/booktabs/booktabs.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/booktabs/booktabs.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/booktabs/booktabs.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/booktabs/booktabs.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/booktabs/booktabs.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/booktabs/booktabs.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/booktabs/booktabs.sty
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/tools/tabularx.sty
 INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/was/fixmath.sty
 INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/was/fixmath.sty
 INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/was/fixmath.sty
@@ -1151,16 +1174,25 @@ INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/lm/ec-lmbx10.tfm
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/lm/ec-lmcsc10.tfm
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/lm/ec-lmr7.tfm
 INPUT /usr/local/texlive/2021/texmf-var/fonts/map/pdftex/updmap/pdftex.map
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/lm/t1lmtt.fd
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/lm/t1lmtt.fd
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/lm/t1lmtt.fd
+INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/lm/t1lmtt.fd
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/lm/ec-lmtt10.tfm
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/lm/ec-lmr9.tfm
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/lm/ec-lmbx9.tfm
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/lm/rm-lmr9.tfm
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/lm/lmmi9.tfm
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/lm/lmsy9.tfm
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/lm/ec-lmtt9.tfm
 INPUT ./L2 minimizing Jlens.bbl
 INPUT L2 minimizing Jlens.bbl
 INPUT ./L2 minimizing Jlens.bbl
 INPUT L2 minimizing Jlens.bbl
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/lm/ec-lmri10.tfm
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/lm/ec-lmri8.tfm
-INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/lm/t1lmtt.fd
-INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/lm/t1lmtt.fd
-INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/lm/t1lmtt.fd
-INPUT /usr/local/texlive/2021/texmf-dist/tex/latex/lm/t1lmtt.fd
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/lm/ec-lmtt8.tfm
 INPUT L2 minimizing Jlens.aux
 INPUT ./L2 minimizing Jlens.out
@@ -1171,6 +1203,7 @@ INPUT /usr/local/texlive/2021/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/enc/dvips/lm/lm-mathex.enc
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmbx10.pfb
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmbx9.pfb
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmcsc10.pfb
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmex10.pfb
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmmi10.pfb
@@ -1180,11 +1213,15 @@ INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmmi8.pfb
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmr10.pfb
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmr7.pfb
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmr8.pfb
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmr9.pfb
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmri10.pfb
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmri8.pfb
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmsy10.pfb
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmsy5.pfb
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmsy7.pfb
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmsy8.pfb
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmtt10.pfb
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmtt8.pfb
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/lm/lmtt9.pfb
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb
 INPUT /usr/local/texlive/2021/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm7.pfb
