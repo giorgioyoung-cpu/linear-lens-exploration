@@ -486,24 +486,24 @@ and then $\cJ_\ell^{pair}$ is the average:
 \section{Empirical Preliminaries}
 We will be using Qwen2.5-0.5B-Instruct to run our experiment. It has $24$ layers and $500$ million parameters, with $d=896$ the model dimension. We will be running this locally, so a larger model will not be functional, particularly if we want to compare directly to the original $J$-lens construction, which will require backwards propagation.
 
-We used Wikitext to fit our affine approximations, and recovered each $\mathcal J$ as described above, while holding out reserved Wikitext passages for evlaution. In \verb|evaluate_lenses.py|, we compare the three methods of fitting affine lenses with the J-lens on these reserved Wikitext validation passages. We produce readouts and qualitatively compare the three affine-slope lenses with J-lens, along with ordinary logit-lens, final-layer, and constant training-mean readouts as baselines. More precisely, we compare top ten highest scoring vocabulary tokens at the midpoint of the retained interval $17+\lfloor\frac{n-18}{2} \rfloor$, and the penultimate token positions of each passage. We apply each lens matrix to the layer-$12$ (the middle layer) residual, along with the model’s final RMS normalization and unembedding, and inspect the ten highest-scoring vocabulary tokens. For ``type" corresponding to one of our three affine lenses, pooled, paired, and same, we compute
-
+We use Wikitext to fit our affine approximations, and recovered each $\mathcal J$ as described above, while holding out reserved Wikitext passages for evlaution. In \verb|evaluate_lenses.py|, we compare the three methods of fitting affine lenses with the J-lens on these reserved Wikitext validation passages. Analogously to \cite{gurnee2026jspace}, we define 
 \begin{align*}
-s_{type}(x,j)
-&=
-W_U\,\operatorname{RMSNorm}_{\mathrm{final}}
-\!\left(\mathcal J_{12}^{type}h_{12}^{(j)}(x)\right)
-\in\mathbb R^{|\mathcal V|},\\
-\operatorname{Readout}_{type}(x,j)
-&=
-\operatorname{Decode}\!\left(
-\operatorname{TopKIndices}_{10}[s_{type}(x,j)]
+\operatorname{lens}_{\mathrm{type}}(h_\ell)
+=
+\operatorname{softmax}\!\left(
+W_U\,\operatorname{norm}
+\!\left(\mathcal J_\ell^{\mathrm{type}}h_\ell\right)
 \right).
 \end{align*}
 
 
 
-To illustrate the results, we record two examples. The first, our global affine lenses appear to capture semantic context better than J-lens, and in the second, worse. The similarity in the pooled outputs reflects pooled limited contextual flexibility, almost certainly downstream from the affine fit being overly constrained, as the best fit affine map with respect to a token and input combined norm. Paired instead seems to be qualitatively the most promising across contexts. We emphasize that both examples were selected after examining the results.
+We produce readouts and qualitatively compare the three affine-slope lenses with J-lens, along with ordinary logit-lens, final-layer, and constant training-mean readouts as baselines. More precisely, we compare top ten highest scoring vocabulary tokens at the midpoint of the retained interval $17+\lfloor\frac{n-18}{2} \rfloor$, and the penultimate token positions of each passage. We apply each lens matrix to the layer-$12$ (the middle layer) residual, along with the model’s final RMS normalization and unembedding, and inspect the ten highest-scoring vocabulary tokens. For ``type" corresponding to one of our three affine lenses, pooled, paired, and same, For each inspected position $j$, we evaluate
+$\operatorname{lens}_{\mathrm{type}}(h_{12}^{(j)}(x))$ and display the vocabulary tokens corresponding to its ten largest entries. 
+
+
+
+To illustrate the results, we record two examples. The first, our global affine lenses appear to yield more contextually relevant tokens than $J$-lens, and in the second, this relationship inverts. The similarity in the pooled outputs reflects pooled limited contextual flexibility, likely downstream from the affine fit being overly constrained, as the best fit affine map with respect to a token and input combined norm. Paired instead seems to be qualitatively the most promising across contexts of the three, producing coherent semantic clusters, although sometimes these clusters are a context mismatch (cf. the second example below). We emphasize that both examples were selected after examining the results.
 
 \begin{table}[H]
 \centering
