@@ -15,9 +15,10 @@ def main():
     p.add_argument('--positions',choices=['retained','legacy'],default='retained')
     p.add_argument('--top-k',type=int,default=10)
     p.add_argument('--print-sequences',type=int,default=3)
+    p.add_argument('--jlens-checkpoint', type=int, help='Use retained J-lens prefix average of this many passages.')
     args=p.parse_args()
     if args.top_k<1 or args.print_sequences<0: p.error('Invalid display counts.')
-    fit,report,maps,means=load_suite(args.fit_dir,args.run_dir,args.jlens_dir)
+    fit,report,maps,means=load_suite(args.fit_dir,args.run_dir,args.jlens_dir,args.jlens_checkpoint)
     model,tok,device=load_model(); check_model(model,report)
     def decode(h):
         with torch.inference_mode():

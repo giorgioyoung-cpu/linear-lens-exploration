@@ -109,7 +109,7 @@ def read_records(run,split,meta,length=None):
     if not records: raise ValueError('No eligible passages.')
     return records,{'sequences':len(records),'file_sha256':hashes,'excluded_short_files':excluded}
 
-def load_suite(fit_dir=None,run=DEFAULT_RUN,jlens_dir=None):
+def load_suite(fit_dir=None,run=DEFAULT_RUN,jlens_dir=None,jlens_checkpoint=None):
     if fit_dir is None:
         paths=sorted(Path(run).expanduser().glob('affine_fit_*/fit_report.json'))
         if not paths: raise FileNotFoundError('Run fit_lenses.py first.')
@@ -128,8 +128,16 @@ def load_suite(fit_dir=None,run=DEFAULT_RUN,jlens_dir=None):
     if jp is None:
         paths=sorted(run.glob('jlens_fit_*/fit_report.json'))
         if paths: jp=paths[-1].parent
+    if jlens_checkpoint is not None:
+        if jlens_checkpoint < 1: raise ValueError('J-lens checkpoint must be positive.')
+        if jp is None: raise FileNotFoundError('No J-lens fit found for requested checkpoint.')
+        jp = jp/'snapshots'/f'prompts_{jlens_checkpoint:04d}'
+        if not (jp/'fit_report.json').is_file():
+            raise FileNotFoundError(f'Requested J-lens snapshot is missing: {jp}')
     if jp:
         jr=json.loads((jp/'fit_report.json').read_text())
+        if jlens_checkpoint is not None and jr['n_prompts'] != jlens_checkpoint:
+            raise ValueError('Snapshot passage count mismatch.')
         for key in ('collection_metadata_sha256','source_layer','target_layer','model_name','model_revision'):
             if jr.get(key)!=report.get(key): raise ValueError('J-lens mismatch: '+key)
         with np.load(jp/'linear_lens.npz',allow_pickle=False) as z: maps['jlens']=z['A'].copy()
@@ -157,3 +165,23 @@ def check_model(model,report):
     if report.get('model_revision') and report['model_revision']!=getattr(model.config,'_commit_hash',None):
         raise ValueError('Model revision mismatch.')
     if report['hidden_size']!=model.config.hidden_size: raise ValueError('Dimension mismatch.')
+
+
+def layer_runs(root):
+    """Return declared per-layer legacy-compatible runs, never guess directories."""
+    root = Path(root).expanduser().resolve()
+    manifest = json.loads((root/'layers.json').read_text())
+    if manifest['status'] != 'complete': raise ValueError('Incomplete multi-layer collection.')
+    return [(int(l), root/name) for l,name in sorted(manifest['layers'].items(), key=lambda x:int(x[0]))]
+
+
+def dispatch_layers(root):
+    """Run the existing single-layer fitter sequentially, preserving CLI options."""
+    import subprocess, sys
+    argv = sys.argv[1:]
+    i = argv.index('--run-dir')
+    for layer, run in layer_runs(root):
+        print(f'\n=== Fitting layer {layer} ===', flush=True)
+        child = argv.copy()
+        child[i+1] = str(run)
+        subprocess.run([sys.executable, str(Path(sys.argv[0]).resolve()), *child], check=True)

@@ -52,4 +52,105 @@ class AffineChecks(unittest.TestCase):
         A,b,_=fit_paired(np.ones((4,3,2)),np.full((4,3,2),4.))
         np.testing.assert_allclose(A,0);np.testing.assert_allclose(b,4)
 
+class MultiLayerChecks(unittest.TestCase):
+    def test_counting_alignment(self):
+        from evaluate_concepts import counting_positions
+        # Prompt ends at zero-based 2; response tokens 7,8; EOS=99.
+        self.assertEqual(counting_positions(3,[1,2,3,7,8,99],{99}),[2,3,4])
+        self.assertEqual(counting_positions(3,[1,2,3,7,8],{99}),[2,3,4])
+        self.assertEqual(counting_positions(3,[1,2,3,99],{99}),[2])
+
+    def test_layer_dispatch_preserves_options(self):
+        import tempfile, json, sys
+        from pathlib import Path
+        from unittest.mock import patch
+        from lens_core import dispatch_layers, layer_runs
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            (root/'layers.json').write_text(json.dumps({'status':'complete',
+                'layers':{'12':'layer_12','4':'layer_04'}}))
+            self.assertEqual([l for l,_ in layer_runs(root)],[4,12])
+            argv=['fit_jlens.py','--run-dir',folder,'--fit','--prompts','8']
+            with patch.object(sys,'argv',argv), patch('subprocess.run') as run:
+                dispatch_layers(root)
+                self.assertEqual(run.call_count,2)
+                for call, layer in zip(run.call_args_list,['layer_04','layer_12']):
+                    command=call.args[0]
+                    self.assertEqual(Path(command[command.index('--run-dir')+1]).resolve(),(root/layer).resolve())
+                    self.assertEqual(command[-3:],['--fit','--prompts','8'])
+                    self.assertTrue(call.kwargs['check'])
+            (root/'layers.json').write_text(json.dumps({'status':'incomplete','layers':{}}))
+            with self.assertRaises(ValueError): layer_runs(root)
+
+class SnapshotChecks(unittest.TestCase):
+    def test_prefix_averages_and_evaluator_loading(self):
+        import tempfile, json
+        from pathlib import Path
+        from fit_jlens import save_snapshot
+        from lens_core import load_suite, sha
+        rng=np.random.default_rng(81)
+        jacobians=rng.normal(size=(118,3,3))
+        means=rng.normal(size=(118,3))
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); (root/'metadata.json').write_text('{}')
+            out=root/'jlens_fit_test'; out.mkdir()
+            config={'model_name':'synthetic','model_revision':None,
+                    'source_layer':12,'target_layer':24,
+                    'collection_metadata_sha256':sha(root/'metadata.json'),
+                    'selected_training_files':[{'filename':str(i)} for i in range(118)],
+                    'requested_prompts':118,'format_version':1}
+            fit=root/'affine_fit_test'; fit.mkdir()
+            report=dict(config, format_version=2, centered=True, activation_run=str(root))
+            (fit/'fit_report.json').write_text(json.dumps(report))
+            arrays={name+'_A':np.eye(3) for name in ('pooled','same','paired')}
+            arrays.update({name+'_mean':np.zeros(3) for name in ('pooled','same')})
+            np.savez(fit/'lenses.npz',**arrays)
+            total=np.zeros((3,3)); mean_total=np.zeros(3)
+            for n,(J,m) in enumerate(zip(jacobians,means),1):
+                total+=J; mean_total+=m
+                if n not in (8,32,64,118): continue
+                saved=save_snapshot(out,total,mean_total,n,config)
+                jr=json.loads((saved/'fit_report.json').read_text())
+                self.assertEqual(jr['n_prompts'],n)
+                self.assertEqual(len(jr['selected_training_files']),n)
+                self.assertEqual(jr['parent_requested_prompts'],118)
+                self.assertEqual(jr['status'],'complete')
+                np.testing.assert_allclose(np.load(saved/'mean_comparison_jlens/training_target_mean.npy'),means[:n].mean(0))
+                _,loaded,maps,_=load_suite(fit,root,out,n)
+                np.testing.assert_allclose(maps['jlens'],jacobians[:n].mean(0))
+                self.assertEqual(loaded['jlens_comparison']['passages'],n)
+                # A replay after interruption preserves the published snapshot.
+                self.assertEqual(save_snapshot(out,total,mean_total,n,config),saved)
+            with self.assertRaises(FileNotFoundError): load_suite(fit,root,out,16)
+            with self.assertRaises(ValueError): save_snapshot(out,total+1,mean_total,118,config)
+
+
+class PauseChecks(unittest.TestCase):
+    def test_pause_and_resume_boundaries(self):
+        from fit_jlens import stage_limit
+        self.assertEqual(list(range(118))[0:stage_limit(118,32)],list(range(32)))
+        self.assertEqual(list(range(118))[32:stage_limit(118,64)],list(range(32,64)))
+        self.assertEqual(stage_limit(118,None),118)
+        for n in (0,119):
+            with self.assertRaises(ValueError): stage_limit(118,n)
+
+    def test_stability_report_known_changes(self):
+        import tempfile, json
+        from pathlib import Path
+        from fit_jlens import write_stability_report
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            for n,scale in [(8,1),(32,2),(64,2)]:
+                target=root/'snapshots'/f'prompts_{n:04d}'
+                target.mkdir(parents=True)
+                np.savez(target/'linear_lens.npz',A=scale*np.eye(3))
+            rows=write_stability_report(root)
+            self.assertAlmostEqual(rows[0]['relative_frobenius_change'],1)
+            self.assertAlmostEqual(rows[0]['matrix_cosine'],1)
+            self.assertAlmostEqual(rows[0]['norm_ratio'],2)
+            self.assertAlmostEqual(rows[1]['relative_frobenius_change'],0)
+            self.assertEqual(len(json.loads((root/'stability.json').read_text())['comparisons']),2)
+
 if __name__=='__main__': unittest.main()
+
+

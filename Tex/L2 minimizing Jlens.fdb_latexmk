@@ -1,12 +1,12 @@
 # Fdb version 3
-["bibtex L2 minimizing Jlens"] 1792427924 "L2 minimizing Jlens.aux" "L2 minimizing Jlens.bbl" "L2 minimizing Jlens" 1792428242
+["bibtex L2 minimizing Jlens"] 1792427924 "L2 minimizing Jlens.aux" "L2 minimizing Jlens.bbl" "L2 minimizing Jlens" 1792529491
   "/usr/local/texlive/2021/texmf-dist/bibtex/bst/amscls/amsplain.bst" 1513722769 25798 9b3546f2f237ee0ce4724eed95f954f4 ""
-  "L2 minimizing Jlens.aux" 1792428242 4018 bae6f647e54711c3d63cf741ae7397f1 "pdflatex"
+  "L2 minimizing Jlens.aux" 1792440944 4018 bae6f647e54711c3d63cf741ae7397f1 "pdflatex"
   "lit.bib" 1791766064 995 cbc9af749290b15a8faa9399b6fb0e11 ""
   (generated)
   "L2 minimizing Jlens.blg"
   "L2 minimizing Jlens.bbl"
-["pdflatex"] 1792428241 "L2 minimizing Jlens.tex" "L2 minimizing Jlens.pdf" "L2 minimizing Jlens" 1792428242
+["pdflatex"] 1792440943 "L2 minimizing Jlens.tex" "L2 minimizing Jlens.pdf" "L2 minimizing Jlens" 1792529491
   "/usr/local/texlive/2021/texmf-dist/fonts/enc/dvips/lm/lm-ec.enc" 1254269338 2375 baa924870cfb487815765f9094cf3728 ""
   "/usr/local/texlive/2021/texmf-dist/fonts/enc/dvips/lm/lm-mathex.enc" 1202520719 3486 c7eadf5dcc57b3b2d11736679f6636ba ""
   "/usr/local/texlive/2021/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc" 1202520719 2405 5dcf2c1b967ee25cc46c58cd52244aed ""
@@ -262,12 +262,12 @@
   "/usr/local/texlive/2021/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1616695603 5169178 a2ce6e2d73f603b690db6777d06dbccb ""
   "/usr/local/texlive/2021/texmf-var/web2c/pdftex/pdflatex.fmt" 1628043327 2724733 e5c1200d162af98ad6e7066478292a87 ""
   "/usr/local/texlive/2021/texmf.cnf" 1616695596 577 4c1911a7228e554c6032256d3cf5567d ""
-  "L2 minimizing Jlens.aux" 1792428242 4018 bae6f647e54711c3d63cf741ae7397f1 "pdflatex"
+  "L2 minimizing Jlens.aux" 1792440944 4018 bae6f647e54711c3d63cf741ae7397f1 "pdflatex"
   "L2 minimizing Jlens.bbl" 1792427924 1047 c5b81fb7e50bcd15bc5d53d69d2d83be "bibtex L2 minimizing Jlens"
-  "L2 minimizing Jlens.out" 1792428242 583 d6edfa59326cf4004b8da96f31dc9648 "pdflatex"
-  "L2 minimizing Jlens.tex" 1792428240 24371 2c1bc40242d149aa17bd6a09ce045b79 ""
+  "L2 minimizing Jlens.out" 1792440944 583 d6edfa59326cf4004b8da96f31dc9648 "pdflatex"
+  "L2 minimizing Jlens.tex" 1792529491 24618 1e27e9693f7dc96e6a807b5dddb078c4 ""
   (generated)
-  "L2 minimizing Jlens.log"
-  "L2 minimizing Jlens.pdf"
   "L2 minimizing Jlens.aux"
+  "L2 minimizing Jlens.log"
   "L2 minimizing Jlens.out"
+  "L2 minimizing Jlens.pdf"

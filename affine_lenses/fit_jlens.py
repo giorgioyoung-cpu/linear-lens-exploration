@@ -1,6 +1,7 @@
-"""Benchmark or estimate a layer-12 Jacobian lens using cached training token IDs.
+"""Benchmark or estimate a Jacobian lens using cached training token IDs.
 
-Default: a small benchmark, NOT a full lens. Run --fit --prompts 8 for a pilot.
+Default: a small benchmark, NOT a full lens. Full fits require an explicit --prompts.
+Use --fit --prompts 118 --save-at 8 32 64 118 for nested sample-size estimates.
 Estimator matches the positional reductions in anthropics/jacobian-lens fitting.py:
 sum valid target positions, mean valid source positions, mean passages.
 Independent Qwen adapter; no attention freezing; parameters are not trained.
@@ -148,23 +149,102 @@ def atomic_npz(path,**arrays):
     temp.replace(path)
 
 
+def save_snapshot(out, total, mean_total, done, report):
+    """Publish an evaluable prefix average; never overwrite a completed snapshot."""
+    import shutil
+    target = out/'snapshots'/f'prompts_{done:04d}'
+    target.parent.mkdir(exist_ok=True)
+    snapshot_report = dict(report, status='complete', n_prompts=done,
+        requested_prompts=done, parent_requested_prompts=report['requested_prompts'],
+        selected_training_files=report['selected_training_files'][:done],
+        snapshot=True, parent_fit_directory=str(out))
+    if target.exists():
+        old = json.loads((target/'fit_report.json').read_text())
+        with np.load(target/'linear_lens.npz', allow_pickle=False) as saved:
+            same = np.array_equal(saved['A'], total/done)
+        if old['selected_training_files'] != snapshot_report['selected_training_files'] or not same:
+            raise ValueError(f'Existing snapshot disagrees: {target}')
+        return target
+    temporary = target.with_name(target.name+'.tmp')
+    if temporary.exists(): shutil.rmtree(temporary)
+    temporary.mkdir()
+    atomic_npz(temporary/'linear_lens.npz', A=total/done)
+    means = temporary/'mean_comparison_jlens'; means.mkdir()
+    np.save(means/'training_target_mean.npy', mean_total/done)
+    (temporary/'fit_report.json').write_text(json.dumps(snapshot_report,indent=2))
+    temporary.rename(target)
+    return target
+
+
+def stage_limit(requested, stop_after):
+    if stop_after is None: return requested
+    if not 1 <= stop_after <= requested:
+        raise ValueError('--stop-after must be between 1 and --prompts.')
+    return stop_after
+
+
+def write_stability_report(out):
+    """Compare retained matrices without model passes or automatic stopping rules."""
+    paths=sorted((out/'snapshots').glob('prompts_*/linear_lens.npz'))
+    rows=[]
+    for previous,current in zip(paths, paths[1:]):
+        with np.load(previous,allow_pickle=False) as z: a=z['A'].copy()
+        with np.load(current,allow_pickle=False) as z: b=z['A'].copy()
+        n0=int(previous.parent.name.split('_')[1]); n1=int(current.parent.name.split('_')[1])
+        na=float(np.linalg.norm(a)); nb=float(np.linalg.norm(b))
+        rows.append({'from_passages':n0,'to_passages':n1,
+            'relative_frobenius_change':float(np.linalg.norm(b-a)/na) if na else None,
+            'matrix_cosine':float(np.sum(a*b)/(na*nb)) if na and nb else None,
+            'norm_ratio':nb/na if na else None})
+    payload={'comparisons':rows,'fit_directory':str(out),
+             'note':'Nested sample estimates; matrix stability is not proof of convergence or readout stability.'}
+    (out/'stability.json').write_text(json.dumps(payload,indent=2))
+    lines=['# J-lens checkpoint stability','',str(out),'',
+           '| Passages | Relative matrix change | Matrix cosine | Norm ratio |',
+           '|---|---:|---:|---:|']
+    def fmt(x): return 'undefined' if x is None else f'{x:.6f}'
+    for r in rows:
+        lines.append(f"| {r['from_passages']} -> {r['to_passages']} | {fmt(r['relative_frobenius_change'])} | {fmt(r['matrix_cosine'])} | {fmt(r['norm_ratio'])} |")
+    lines += ['', 'Relative change is ||J_new-J_old||_F / ||J_old||_F.',
+              'Cosine compares the matrices flattened into vectors; norm ratio is ||J_new||_F / ||J_old||_F.',
+              'No stability threshold or automatic decision is applied. Readouts must also be compared.',
+              'These estimates share passages; agreement is not an independent replication.']
+    (out/'stability.md').write_text('\n'.join(lines))
+    return rows
+
+
 def main():
-    import torch
-    from transformers import AutoModelForCausalLM
-    from model_utils import MODEL_NAME,DATA_DIR
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--fit',action='store_true')
     p.add_argument('--run-dir',type=Path,default=DEFAULT_RUN)
-    p.add_argument('--prompts',type=int,default=8)
+    p.add_argument('--prompts',type=int,default=None)
+    p.add_argument('--save-at',type=int,nargs='+',default=[],
+                   help='Retain prefix averages at these passage counts; final count is always retained.')
     p.add_argument('--dim-batch',type=int,default=2)
     p.add_argument('--benchmark-rows',type=int,default=8)
     p.add_argument('--device',choices=['auto','mps','cpu','cuda'],default='auto')
     p.add_argument('--resume',type=Path)
+    p.add_argument('--stop-after',type=int,help='Pause after this TOTAL number of passages per layer, preserving the planned --prompts target.')
     args=p.parse_args()
+    if args.fit and args.prompts is None: p.error('--fit requires an explicit --prompts count.')
+    if args.prompts is None: args.prompts=8  # Benchmark timing only.
+    if any(n<1 or n>args.prompts for n in args.save_at): p.error('--save-at counts must lie between 1 and --prompts.')
+    try: limit=stage_limit(args.prompts,args.stop_after)
+    except ValueError as e: p.error(str(e))
+    if args.stop_after is not None and not args.fit: p.error('--stop-after requires --fit.')
+    args.save_at=sorted(set(args.save_at+[args.prompts]))
     if min(args.prompts,args.dim_batch,args.benchmark_rows)<1: p.error('Counts must be positive.')
     if args.resume and not args.fit: p.error('--resume requires --fit.')
-    self_test();print('Synthetic Jacobian aggregation check passed.',flush=True)
     run=args.run_dir.expanduser().resolve()
+    if (run/'layers.json').exists():
+        from lens_core import dispatch_layers
+        if args.resume: raise ValueError('Resume one layer at a time using its run directory.')
+        dispatch_layers(run)
+        return
+    import torch
+    from transformers import AutoModelForCausalLM
+    from model_utils import MODEL_NAME,DATA_DIR
+    self_test();print('Synthetic Jacobian aggregation check passed.',flush=True)
     meta_path=run/'metadata.json';meta=json.loads(meta_path.read_text())
     if meta.get('status')!='complete' or meta['model_name']!=MODEL_NAME:
         raise ValueError('Expected our completed Qwen activation collection.')
@@ -198,7 +278,8 @@ def main():
         'estimator':'mean passages; mean valid sources; SUM valid targets (causal)',
         'attention':'eager, differentiated normally','dtype':'float32 autograd; float64 accumulation',
         'selected_training_files':chosen,'reference':REFERENCE,'device':str(device),
-        'dim_batch':args.dim_batch,'test_evaluated':False}
+        'dim_batch':args.dim_batch,'test_evaluated':False,
+        'save_at':args.save_at,'sampling_order':'sorted eligible training filenames; nested prefixes'}
     def read(entry):
         raw=(run/'train'/entry['filename']).read_bytes()
         if hashlib.sha256(raw).hexdigest()!=entry['sha256']:raise ValueError('Training file changed.')
@@ -240,7 +321,8 @@ def main():
         total=np.zeros((d,d));mean_total=np.zeros(d);done=0
         atomic_npz(out/'checkpoint.npz',sum_J=total,done=np.array(done),mean_total=mean_total)
     print(f'Fit directory (for resume): {out}',flush=True)
-    for entry in chosen[done:]:
+    if done>limit: raise ValueError('Checkpoint is already beyond --stop-after; choose a larger stopping count.')
+    for entry in chosen[done:limit]:
         print(f'Passage {done+1}/{len(chosen)}: {entry["filename"]}',flush=True)
         record,ids=read(entry)
         J,timing=estimate_rows(model,ids,layer,args.dim_batch,list(range(d)),record)
@@ -248,7 +330,6 @@ def main():
             check=finite_difference_check(model,ids,layer,0,J[0])
             if not check['passed']:raise ValueError(f'Finite-difference check failed: {check}')
         total+=J;mean_total+=record['h_final'][16:-1].double().mean(dim=0).numpy();done+=1
-        atomic_npz(out/'checkpoint.npz',sum_J=total,done=np.array(done),mean_total=mean_total)
         # Only COMPLETE passage estimates enter the readable lens.
         atomic_npz(out/'linear_lens.npz',A=total/done)
         means=out/'mean_comparison_jlens';means.mkdir(exist_ok=True)
@@ -260,7 +341,18 @@ def main():
             'baseline_mean':'uniform valid target positions, then uniform completed training passages'}
         temp=out/'fit_report.json.tmp';temp.write_text(json.dumps(report,indent=2),encoding='utf-8')
         temp.replace(out/'fit_report.json')
+        if done in args.save_at or done==limit:
+            snapshot=save_snapshot(out,total,mean_total,done,report)
+            print(f'Retained {done}-passage snapshot: {snapshot}',flush=True)
+        atomic_npz(out/'checkpoint.npz',sum_J=total,done=np.array(done),mean_total=mean_total)
         print(f'Saved {done}-passage estimate; last passage {timing["elapsed_seconds"]:.1f}s.',flush=True)
+    write_stability_report(out)
+    if done<len(chosen):
+        report=json.loads((out/'fit_report.json').read_text())
+        report['status']='paused'
+        (out/'fit_report.json').write_text(json.dumps(report,indent=2))
+        print(f'PAUSED at {done}/{len(chosen)} passages. No further computation for this layer.',flush=True)
+    print(f'Stability report: {out / "stability.md"}',flush=True)
     print(f'\nSaved J-lens: {out}',flush=True)
 
 

@@ -16,6 +16,10 @@ def main():
     if args.length<=17 or not 0<args.pinv_rtol<1: p.error('length > 17 and 0 < pinv-rtol < 1 required.')
     start=perf_counter()
     run=args.run_dir.expanduser().resolve()
+    if (run/'layers.json').exists():
+        from lens_core import dispatch_layers
+        dispatch_layers(run)
+        return
     meta=json.loads((run/'metadata.json').read_text())
     if meta.get('status')!='complete' or meta.get('format_version')!=1: raise ValueError('Incomplete/unsupported collection.')
     train,ti=read_records(run,'train',meta,args.length)

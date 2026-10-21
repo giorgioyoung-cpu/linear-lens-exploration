@@ -49,51 +49,38 @@ def select_sequences(split, tokenizer, count, max_tokens, min_tokens, seed):
     raise ValueError(f"Requested {count} sequences; only found {len(selected)}.")
 
 
-def capture_residuals(model, input_ids, layer, device):
-    """Return CPU float32 tensors of shape [sequence_length, model_dimension].
-
-    h_mid is the output of transformer block `layer` (one-based).
-    h_final is the input to the final RMSNorm: after all transformer blocks.
-    """
-    captured = {}
-
-    def save_mid(module, args, output):
-        hidden = output[0] if isinstance(output, tuple) else output
-        captured["h_mid"] = hidden.detach().clone()
-
-    def save_final(module, args):
-        captured["h_final"] = args[0].detach().clone()
-
-    middle_hook = model.model.layers[layer - 1].register_forward_hook(save_mid)
-    final_hook = model.model.norm.register_forward_pre_hook(save_final)
+def capture_layers(model, input_ids, layers, device):
+    """Capture several post-block residuals in one causal forward pass, on CPU."""
+    captured, hooks = {}, []
+    def save(key):
+        def hook(module, args, output):
+            h = output[0] if isinstance(output, tuple) else output
+            captured[key] = h[0].detach().to(device='cpu', dtype=torch.float32).clone()
+        return hook
+    def final_hook(module, args):
+        captured['final'] = args[0][0].detach().to(device='cpu', dtype=torch.float32).clone()
     try:
+        for layer in layers:
+            hooks.append(model.model.layers[layer-1].register_forward_hook(save(layer)))
+        hooks.append(model.model.norm.register_forward_pre_hook(final_hook))
         with torch.inference_mode():
-            # Run the transformer without the vocabulary projection to save work.
-            result = model.model(
-                input_ids=input_ids.unsqueeze(0).to(device),
-                use_cache=False, return_dict=True,
-            )
-            if set(captured) != {"h_mid", "h_final"}:
-                raise RuntimeError("A residual hook did not fire.")
-            # Check that we captured BEFORE final normalization.
-            reconstructed = model.model.norm(captured["h_final"])
-            torch.testing.assert_close(
-                reconstructed, result.last_hidden_state, rtol=1e-5, atol=1e-6,
-            )
+            result = model.model(input_ids=input_ids.unsqueeze(0).to(device),
+                                 use_cache=False, return_dict=True)
+            reconstructed = model.model.norm(captured['final'].to(device).unsqueeze(0))
+            torch.testing.assert_close(reconstructed, result.last_hidden_state, rtol=1e-5, atol=1e-6)
     finally:
-        middle_hook.remove()
-        final_hook.remove()
+        for hook in hooks: hook.remove()
+    if set(captured) != set(layers) | {'final'}:
+        raise RuntimeError('A residual hook did not fire.')
+    for h in captured.values():
+        if h.shape != (len(input_ids), model.config.hidden_size) or not torch.isfinite(h).all():
+            raise ValueError('Invalid captured residuals.')
+    return captured
 
-    expected = (1, len(input_ids), model.config.hidden_size)
-    output = {}
-    for name, value in captured.items():
-        if tuple(value.shape) != expected:
-            raise RuntimeError(f"Unexpected {name} shape: {tuple(value.shape)}")
-        value = value[0].to(device="cpu", dtype=torch.float32).contiguous()
-        if not torch.isfinite(value).all():
-            raise RuntimeError(f"Non-finite values in {name}.")
-        output[name] = value
-    return output
+
+def capture_residuals(model, input_ids, layer, device):
+    values = capture_layers(model, input_ids, [layer], device)
+    return {'h_mid': values[layer], 'h_final': values['final']}
 
 
 def parse_args():
@@ -105,6 +92,7 @@ def parse_args():
     parser.add_argument("--min-tokens", type=int, default=32)
     parser.add_argument("--layer", type=int, default=12,
                         help="One-based block number: 12 means after 12 blocks.")
+    parser.add_argument("--layers", type=int, nargs="+", help="Collect multiple layers in one forward pass.")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
@@ -122,10 +110,11 @@ def main():
     dataset = load_from_disk(str(dataset_path))
     print("Loading cached Qwen model...", flush=True)
     model, tokenizer, device = load_model()
-    if not 1 <= args.layer < model.config.num_hidden_layers:
+    layers = sorted(set(args.layers or [args.layer]))
+    if any(not 1 <= l < model.config.num_hidden_layers for l in layers):
         raise ValueError("Choose an intermediate block between 1 and L-1.")
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S_%fZ")
-    run_dir = (args.output or DATA_DIR / "activations" / f"layer{args.layer}_{stamp}").expanduser()
+    run_dir = (args.output or DATA_DIR / "activations" / (f"multilayer_{stamp}" if args.layers else f"layer{args.layer}_{stamp}")).expanduser()
     run_dir.mkdir(parents=True, exist_ok=False)
     print(f"Device: {device}; output: {run_dir}", flush=True)
 
@@ -151,12 +140,18 @@ def main():
         "packages": {p: version(p) for p in ("torch", "transformers", "datasets")},
         "splits": {},
     }
-    manifest = run_dir / "metadata.json"
-    manifest.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    roots = {l: run_dir / f'layer_{l:02d}' if args.layers else run_dir for l in layers}
+    manifests = {}
+    for l, root in roots.items():
+        root.mkdir(parents=True, exist_ok=True)
+        manifests[l] = dict(metadata, layer=l, splits={})
+        (root/'metadata.json').write_text(json.dumps(manifests[l], indent=2))
+    if args.layers:
+        (run_dir/'layers.json').write_text(json.dumps({'status':'incomplete',
+            'layers': {str(l): root.name for l,root in roots.items()}}, indent=2))
 
     for split_number, (split_name, count) in enumerate(counts.items()):
-        split_dir = run_dir / split_name
-        split_dir.mkdir()
+        for root in roots.values(): (root/split_name).mkdir()
         samples = select_sequences(
             dataset[split_name], tokenizer, count, args.max_tokens,
             args.min_tokens, args.seed + split_number,
@@ -164,27 +159,30 @@ def main():
         started = perf_counter()
         n_tokens = 0
         for i, sample in enumerate(samples):
-            arrays = capture_residuals(model, sample["input_ids"], args.layer, device)
+            values = capture_layers(model, sample["input_ids"], layers, device)
             n = len(sample["input_ids"])
-            record = dict(sample, **arrays, positions=torch.arange(n),
-                          split=split_name, sequence_id=i, layer=args.layer,
-                          final_layer=model.config.num_hidden_layers)
-            target = split_dir / f"sequence_{i:05d}.pt"
-            temporary = target.with_suffix(".pt.tmp")
-            torch.save(record, temporary)
-            temporary.replace(target)
+            for l, root in roots.items():
+                record = dict(sample, h_mid=values[l], h_final=values['final'], positions=torch.arange(n),
+                              split=split_name, sequence_id=i, layer=l,
+                              final_layer=model.config.num_hidden_layers)
+                target = root/split_name/f'sequence_{i:05d}.pt'
+                temporary = target.with_suffix('.pt.tmp')
+                torch.save(record, temporary)
+                temporary.replace(target)
             n_tokens += n
             print(f"{split_name}: {i + 1}/{count}, {n} tokens", flush=True)
         elapsed = perf_counter() - started
-        metadata["splits"][split_name] = {
-            "sequences": count, "tokens": n_tokens,
-            "collection_and_save_seconds": elapsed,
-        }
-        manifest.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
-        print(f"{split_name}: {n_tokens} tokens in {elapsed:.1f} seconds", flush=True)
-
-    metadata["status"] = "complete"
-    manifest.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+        for l, root in roots.items():
+            manifests[l]['splits'][split_name] = {'sequences':count, 'tokens':n_tokens,
+                                                 'collection_and_save_seconds':elapsed}
+            (root/'metadata.json').write_text(json.dumps(manifests[l], indent=2))
+        print(f'{split_name}: {n_tokens} tokens in {elapsed:.1f} seconds', flush=True)
+    for l, root in roots.items():
+        manifests[l]['status'] = 'complete'
+        (root/'metadata.json').write_text(json.dumps(manifests[l], indent=2))
+    if args.layers:
+        (run_dir/'layers.json').write_text(json.dumps({'status':'complete',
+            'layers':{str(l):root.name for l,root in roots.items()}}, indent=2))
     print(f"\nCollection complete. Saved to: {run_dir}", flush=True)
 
 

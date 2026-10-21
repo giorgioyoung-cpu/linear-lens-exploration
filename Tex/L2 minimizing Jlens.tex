@@ -486,7 +486,7 @@ and then $\cJ_\ell^{pair}$ is the average:
 \section{Empirical Preliminaries}
 We will be using Qwen2.5-0.5B-Instruct to run our experiment. It has $24$ layers and $500$ million parameters, with $d=896$ the model dimension. We will be running this locally, so a larger model will not be functional, particularly if we want to compare directly to the original $J$-lens construction, which will require backwards propagation.
 
-We use Wikitext to fit our affine approximations, and recovered each $\mathcal J$ as described above, while holding out reserved Wikitext passages for evlaution. In \verb|evaluate_lenses.py|, we compare the three methods of fitting affine lenses with the J-lens on these reserved Wikitext validation passages. Analogously to \cite{gurnee2026jspace}, we define 
+We use Wikitext to fit our affine approximations, and recover each $\mathcal J$ as described above, while holding out reserved Wikitext passages for evlaution. We note that we have excluded passages with fewer than 32 tokens, and truncated longer passages at 128 tokens for the training run (mostly to save on compute for the J-lens computation). In \verb|evaluate_lenses.py|, we compare the three methods of fitting affine lenses with the J-lens on these reserved Wikitext validation passages (split is 118 training, 40 validation, and 40 test passages) . Analogously to \cite{gurnee2026jspace}, we define 
 \begin{align*}
 \operatorname{lens}_{\mathrm{type}}(h_\ell)
 =
