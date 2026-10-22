@@ -294,7 +294,7 @@
 
 \begin{document}
 \begin{abstract}
-In this note, we examine several global linearization techniques and examine some qualitative attributes of the slope variable $\cJ$ under each method in comparison to the $J$-lens introduced in \cite{gurnee2026jspace}. If the preliminary results are positive, we will construct a corresponding $\cJ$-space analogously to \cite{gurnee2026jspace}, and examine how its attributes compare. We will also examine whether additional affine or quadratic terms in the approximation improve the workspace representation in some sense. 
+In this note, we examine several global linearization techniques and examine some qualitative attributes of the slope variable $\cJ$ under each method in comparison to the $J$-lens introduced in \cite{gurnee2026jspace}. If the preliminary results are positive, we will construct a corresponding $\cJ$-space analogously to \cite{gurnee2026jspace}, and examine how its attributes compare. We will also examine whether additional affine or quadratic terms in the approximation improve the workspace representation.
 
 \end{abstract}
 
@@ -484,6 +484,7 @@ and then $\cJ_\ell^{pair}$ is the average:
 
 
 \section{Empirical Preliminaries}
+\subsection{Set-up and first order qualitative analysis}
 We will be using Qwen2.5-0.5B-Instruct to run our experiment. It has $24$ layers and $500$ million parameters, with $d=896$ the model dimension. We will be running this locally, so a larger model will not be functional, particularly if we want to compare directly to the original $J$-lens construction, which will require backwards propagation.
 
 We use Wikitext to fit our affine approximations, and recover each $\mathcal J$ as described above, while holding out reserved Wikitext passages for evlaution. We note that we have excluded passages with fewer than 32 tokens, and truncated longer passages at 128 tokens for the training run (mostly to save on compute for the J-lens computation). In \verb|evaluate_lenses.py|, we compare the three methods of fitting affine lenses with the J-lens on these reserved Wikitext validation passages (split is 118 training, 40 validation, and 40 test passages) . Analogously to \cite{gurnee2026jspace}, we define 
@@ -522,22 +523,23 @@ Lens & Top five tokens \\
 Pooled & Canyon, Cemetery, damage, Surrey, gunfire \\
 Same   & Union, union, latter, unions, firing \\
 Paired & cavalry, troops, militia, Protector, revolt \\
-J-lens &
+J-lens (118 passages) &
 \texttt{?\textbackslash u201d},
-\texttt{?"\textbackslash n},
+\texttt{.\textbackslash u201d},
 \texttt{?"},
 \texttt{\textbackslash uff1f\textbackslash u201d},
-\texttt{.\textbackslash u201d} \\
+\texttt{?"\textbackslash n} \\
 \bottomrule
 \end{tabularx}
 
-\caption{Illustrative layer-12 readouts at position
-127 of a 128-token validation passage.
-The inspected token is in bold, and tokens appear in descending score order, with leading
-spaces omitted.
-For J-lens, \texttt{\textbackslash n} denotes a newline,
-\texttt{\textbackslash u201d} a right double quotation mark,
-and \texttt{\textbackslash uff1f} a full-width question mark.}
+\caption{Layer-12 readouts at position 127 of a 128-token
+held-out validation passage. All four lenses were estimated
+from the same 118 WikiText training passages.
+The inspected token is bold; readout tokens are ordered by
+descending score, with leading spaces omitted.
+Escapes denote a newline (\texttt{\textbackslash n}),
+a right double quotation mark (\texttt{\textbackslash u201d}),
+and a full-width question mark (\texttt{\textbackslash uff1f}).}
 \label{tab:readout-military}
 \end{table}
 
@@ -561,26 +563,28 @@ Pooled & canyon, Canyon, exposures,
 \textbackslash u4fdd\textbackslash u62a4}, emetery \\
 Same   & continent, Isle, northwest, north, island \\
 Paired & northwest, coastal, north, northeast, northern \\
-J-lens & Earth, orbit, planet, NASA, SpaceX \\
+J-lens (118 passages) & Earth, orbit, planet, NASA, orbital \\
 \bottomrule
 \end{tabularx}
 
-\caption{Illustrative layer-12 readouts at position
-72 of a 128-token validation passage
-(\texttt{sequence\_00004.pt}).
-The inspected token is in bold, and tokens appear in descending score order, with leading
-spaces omitted.
-The Unicode escape sequence denotes a Chinese token
-meaning ``nature conservation''; \texttt{emetery}
-is a literal token fragment.
-Context spacing and hyphenation are simplified for readability.
-This example was selected after inspecting the results
-to illustrate a contextually relevant J-lens readout
-and an unrelated paired readout.}
+\caption{Layer-12 readouts at position 72 of a 128-token
+held-out validation passage (\texttt{sequence\_00004.pt}).
+All four lenses were estimated from the same 118 WikiText
+training passages. The inspected token is bold; readout tokens
+are ordered by descending score, with leading spaces omitted.
+The Unicode escape denotes a Chinese token meaning
+``nature conservation''; \texttt{emetery} is a literal token
+fragment. Context spacing and hyphenation are simplified.
+This example was selected after inspecting the results to
+illustrate a contextually relevant J-lens readout and an
+unrelated paired readout.}
 \label{tab:readout-astronomy}
 \end{table}
 
+\subsection{Five layer arithmetic test}
+We perform a coarse version of the arithmetic test of \cite{gurnee2026jspace} at five layers (the computational bottleneck is the backpropagation required to compute $J$-lens).
 
+We were unable to replicate the $J$-lens results on this model across 32 arithmetic examples ($J$-lens ranked intermediate value tokens very low), and so could not establish the intended baseline against which to measure the linear lenses. However, the model only answered 10 of these questions correctly (and only $3/14$ problems of the form $(a+b)*c+d$ for $c>1$), complicating the experiment. In some correctly answered examples with $c=1$, the same-position lens ranked the intermediate value highly. However, all of the final answers for the correct answers with $c>1$ are the number $9$, which limits our ability to distinguish successful computation from an answer-specific bias. A stronger model may yield more meaningful results.
 
 
 

@@ -156,6 +156,141 @@ def evaluate_counting(args):
     print(f'Saved counting activations and readouts: {out}',flush=True)
 
 
+def plot_arithmetic(entries, layers, tokens, out):
+    """Plot exact numeral ranks; sampled layers are discrete, not interpolated."""
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import LogNorm
+    methods = ['jlens', 'pooled', 'same', 'paired', 'ordinary_logit_lens']
+    lookup = {(e['layer'], e['position']): e for e in entries}
+    vmax = max(c['rank'] for e in entries for m in methods
+               for c in e['readouts'][m]['concepts'].values() if c['rank'] is not None)
+    for method in methods:
+        fig, axes = plt.subplots(3, 1, figsize=(max(10, len(tokens)*0.45), 8), constrained_layout=True)
+        for ax, number in zip(axes, ('21', '42', '49')):
+            values = np.array([[lookup[l,j+1]['readouts'][method]['concepts'][number]['rank']
+                                for j in range(len(tokens))] for l in layers], dtype=float)
+            im = ax.imshow(np.ma.masked_invalid(values), aspect='auto', interpolation='nearest',
+                           norm=LogNorm(vmin=1, vmax=max(10,vmax)), cmap='viridis_r')
+            ax.set_yticks(range(len(layers)), layers)
+            ax.set_xticks(range(len(tokens)), [f'{j+1}: {t!r}' for j,t in enumerate(tokens)], rotation=60, ha='right')
+            ax.set_ylabel('Block'); ax.set_title(f'{method}: numeral {number}')
+        fig.colorbar(im, ax=axes, label='Vocabulary rank (log scale; lower is better)')
+        fig.savefig(out/f'heatmap_{method}.png', dpi=160)
+        plt.close(fig)
+    fig, axes = plt.subplots(1,3,figsize=(13,4),constrained_layout=True)
+    for ax, number in zip(axes, ('21','42','49')):
+        for method in methods:
+            ranks = [lookup[l,len(tokens)]['readouts'][method]['concepts'][number]['rank'] for l in layers]
+            ax.plot(layers, [np.nan if r is None else r for r in ranks], marker='o', label=method)
+        ax.set_yscale('log'); ax.invert_yaxis(); ax.set_xticks(layers)
+        ax.set_xlabel('Block (lines connect sampled layers only)'); ax.set_title(f'Final prompt token: {number}')
+    axes[0].set_ylabel('Vocabulary rank (lower is better)')
+    axes[-1].legend(fontsize=7)
+    fig.savefig(out/'final_position_ranks.png',dpi=180); plt.close(fig)
+
+
+def evaluate_paper_arithmetic(args):
+    """Figure-17-inspired prompt probe; no arithmetic-specific fitting."""
+    import csv
+    import torch
+    from model_utils import load_model
+    from collect_activations import capture_layers
+    from lens_core import layer_runs, stamp
+    if args.format != 'plain':
+        raise ValueError('Use --format plain for the exact calc prompt; no chat wrapper is added.')
+    if args.jlens_checkpoint is None:
+        raise ValueError('Specify --jlens-checkpoint explicitly (our agreed run uses 118).')
+    if args.fit_dir or args.jlens_dir:
+        raise ValueError('Use the multi-layer --run-dir for this five-layer probe.')
+    runs = dict(layer_runs(args.run_dir))
+    layers = [4,8,12,16,20]
+    suites = [load_suite(run=runs[l], jlens_checkpoint=args.jlens_checkpoint) for l in layers]
+    for layer, (_,report,maps,_) in zip(layers,suites):
+        if report['source_layer'] != layer or 'jlens' not in maps:
+            raise ValueError('Missing or mismatched lens at layer '+str(layer))
+        for key in ('model_name','model_revision','target_layer','hidden_size'):
+            if report[key] != suites[0][1][key]: raise ValueError('Incompatible fits: '+key)
+    model,tok,device = load_model()
+    for _,report,_,_ in suites: check_model(model,report)
+    prompt = 'calc: ( 4 + 17 ) * 2 + 7 ='
+    ids = torch.tensor(tok.encode(prompt,add_special_tokens=False),dtype=torch.long)
+    tokens = [tok.decode([int(i)],skip_special_tokens=False) for i in ids]
+    # Exact decimal tokens, not their first digit or a best-of-variants score.
+    candidates = {}
+    for number in ('21','42','49'):
+        encoded = tok.encode(number,add_special_tokens=False)
+        candidates[number] = {'encoding':encoded, 'token_id':encoded[0]
+                              if len(encoded)==1 and tok.decode(encoded)==number else None}
+    print('Numeral tokenization:', candidates, flush=True)
+    all_layers = list(range(1,len(model.model.layers)+1))
+    captured = capture_layers(model,ids,all_layers,device)
+    out = args.run_dir.expanduser()/('arithmetic_paper_'+stamp()); out.mkdir()
+    torch.save({'input_ids':ids,'prompt':prompt,'index_base':1,'layers':all_layers,
+                'h_layers':{l:captured[l] for l in all_layers},'h_final':captured['final']},out/'activations.pt')
+    with torch.inference_mode():
+        generated = model.generate(input_ids=ids.unsqueeze(0).to(device),
+            attention_mask=torch.ones_like(ids).unsqueeze(0).to(device),
+            max_new_tokens=args.max_new_tokens,do_sample=False,
+            pad_token_id=tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id)
+    continuation_ids = generated[0,len(ids):].detach().cpu().tolist()
+    response = tok.decode(continuation_ids,skip_special_tokens=True)
+    print('Generated continuation:',repr(response),flush=True)
+    def decode(h):
+        with torch.inference_mode():
+            v=torch.as_tensor(h,dtype=torch.float32,device=device)
+            logits=model.lm_head(model.model.norm(v)).float().cpu()
+        if not torch.isfinite(logits).all(): raise ValueError('Nonfinite readout.')
+        return logits
+    finals = [decode(h) for h in captured['final']]
+    entries, rows = [], []
+    lines=['# Five-layer arithmetic probe','', 'Prompt: '+repr(prompt),
+           'Generated continuation: '+repr(response),'',
+           'Exact decimal-token ranks; unavailable multi-token numerals have null ranks.',
+           'Positions are one-based, after consuming the displayed token. No generated-answer activations are inspected.',
+           'All affine readouts discard intercepts. Readouts do not establish causal use.',
+           'Adaptation of Figure 17: Qwen, five sampled layers, existing WikiText lens fits; not an exact replication.','']
+    for fit,report,maps,means in suites:
+        layer=report['source_layer']
+        constants={name:decode(mean) for name,mean in means.items()}
+        for j,token in enumerate(tokens):
+            h=captured[layer][j].numpy().astype(np.float64)
+            methods={name:decode(A@h) for name,A in maps.items()}
+            methods.update(ordinary_logit_lens=decode(h),final_layer_readout=finals[j],**constants)
+            readouts={}
+            lines += [f'## Layer {layer}, position {j+1}: {token!r}','']
+            for name,logits in methods.items():
+                concepts={}
+                for number,candidate in candidates.items():
+                    i=candidate['token_id']
+                    rank=None if i is None else 1+int((logits>logits[i]).sum())
+                    concepts[number]={'token_id':i,'rank':rank}
+                    rows.append([layer,j+1,token,name,number,i,rank])
+                top=rank_tokens(logits,tok,10)
+                readouts[name]={'top_tokens':top,'concepts':concepts}
+                lines += [name+': '+', '.join(repr(t['token']) for t in top),
+                          'Ranks: '+', '.join(f'{n}={c["rank"]}' for n,c in concepts.items()),'']
+            entries.append({'layer':layer,'position':j+1,'token':token,'readouts':readouts})
+        print(f'Arithmetic readouts complete: layer {layer}',flush=True)
+    payload={'task':'arithmetic_paper','prompt':prompt,'format':'plain','input_ids':ids.tolist(),
+             'tokens':tokens,'index_base':1,'response':response,'generated_ids':continuation_ids,
+             'max_new_tokens':args.max_new_tokens,'do_sample':False,'expected_answer':'49',
+             'exact_answer_match':response.strip()=='49','candidate_tokenization':candidates,
+             'evaluated_layers':layers,'saved_activation_layers':all_layers,
+             'rank_convention':'1 + count of strictly higher logits; exact decimal token only',
+             'fits':[{'directory':str(f),'report':r} for f,r,_,_ in suites],
+             'reference':'https://www.transformer-circuits.pub/2026/workspace/index.html',
+             'examples':entries}
+    (out/'readouts.json').write_text(json.dumps(payload,indent=2,ensure_ascii=False))
+    (out/'readouts.md').write_text('\n'.join(lines))
+    with (out/'concept_ranks.csv').open('w',newline='') as f:
+        writer=csv.writer(f);writer.writerow(['layer','position','token','method','numeral','token_id','rank']);writer.writerows(rows)
+    if any(c['token_id'] is not None for c in candidates.values()):
+        plot_arithmetic(entries,layers,tokens,out)
+    print(f'Saved arithmetic results: {out}',flush=True)
+
+
 def main():
     import torch
     from model_utils import load_model, MODEL_NAME
@@ -164,12 +299,15 @@ def main():
     parser.add_argument('--format', choices=['chat','plain'], default='chat')
     parser.add_argument('--run-dir', type=Path, default=DEFAULT_RUN)
     parser.add_argument('--jlens-dir', type=Path)
-    parser.add_argument('--task', choices=['arithmetic','counting'], default='arithmetic')
+    parser.add_argument('--task', choices=['arithmetic','counting','arithmetic-paper'], default='arithmetic')
     parser.add_argument('--prompt', default='Count to five and introspect deeply.')
     parser.add_argument('--max-new-tokens', type=int, default=64)
     parser.add_argument('--jlens-checkpoint', type=int, help='Use retained J-lens prefix average of this many passages.')
     args = parser.parse_args()
     if args.max_new_tokens < 1: parser.error('max-new-tokens must be positive.')
+    if args.task == 'arithmetic-paper':
+        evaluate_paper_arithmetic(args)
+        return
     if args.task == 'counting':
         evaluate_counting(args)
         return
